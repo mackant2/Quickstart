@@ -23,7 +23,9 @@ public class Auto extends OpMode {
 
     private Follower follower;
 
-    private PathChain builtPath;
+    private PathChain initPath, grabPath, scorePath;
+
+    private String state = "init";
 
     @Override
     public void init() {
@@ -31,35 +33,68 @@ public class Auto extends OpMode {
         follower = new Follower(hardwareMap);
 
         Pose startPose = new Pose(7.875, 65.85);
+        Pose scorePose = new Pose(35, 65.85);
+        Pose grabPose = new Pose(7.875, 30, Math.PI);
 
         follower.setStartingPose(startPose);
 
-        builtPath = follower.pathBuilder()
+        initPath = follower.pathBuilder()
             .addPath(
                 // Line 2
                 new BezierLine(
                     new Point(startPose),
-                    new Point(new Pose(35, 65.85))
+                    new Point(scorePose)
                 )
             )
             .setTangentHeadingInterpolation()
-           /* .addPath(
-                    // Line 3
-                    new BezierLine(
-                            new Point(110.000, 110.000, Point.CARTESIAN),
-                            new Point(80.000, 110.000, Point.CARTESIAN)
-                    )
+                .build();
+
+        grabPath = follower.pathBuilder()
+            .addPath(
+                new BezierLine(
+                    new Point(scorePose),
+                    new Point(grabPose)
+                )
             )
-            .setTangentHeadingInterpolation()*/
+            .setLinearHeadingInterpolation(scorePose.getHeading(), grabPose.getHeading())
+                .build();
+
+        scorePath = follower.pathBuilder()
+            .addPath(
+                new BezierLine(
+                    new Point(grabPose),
+                    new Point(scorePose)
+                )
+            )
+            .setLinearHeadingInterpolation(grabPose.getHeading(), scorePose.getHeading())
                 .build();
     }
 
     @Override
     public void start() {
-        follower.followPath(builtPath, true);
+        follower.followPath(initPath, true);
     }
 
     @Override public void loop() {
+        switch (state) {
+            case "init":
+                follower.followPath(initPath, true);
+                state = "grabbing off wall";
+                break;
+            case "grabbing off wall":
+                if (!follower.isBusy()) {
+                    follower.followPath(grabPath, true);
+                    state = "scoring";
+                }
+                break;
+            case "scoring":
+                if (!follower.isBusy()) {
+                    follower.followPath(scorePath, true);
+                    state = "grabbing off wall";
+                }
+                break;
+        }
+
         logger.Log("X: " + follower.getPose().getX());
         logger.Log("Y: " + follower.getPose().getY());
         logger.Log("Heading: " + follower.getPose().getHeading());
