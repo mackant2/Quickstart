@@ -11,9 +11,24 @@
 
 // Custom definitions may go here
 
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url = 'https://www.matthewo.tech/maven/' //Fast Load build dependency
+        }
+        maven {url = 'https://jitpack.io'}
+    }
+
+    dependencies {
+        classpath 'org.team11260:fast-load-plugin:0.1.2'
+    }
+}
+
 // Include common definitions from above.
 apply from: '../build.common.gradle'
 apply from: '../build.dependencies.gradle'
+apply plugin: 'org.team11260.fast-load-plugin'
 
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
@@ -23,10 +38,17 @@ android {
     }
 }
 
+repositories {
+    maven {url = 'https://jitpack.io' } //needed for State Factory
+    maven {url = 'https://www.matthewo.tech/maven/'} //needed for Fast Load
+}
+
 dependencies {
     implementation project(':FtcRobotController')
     annotationProcessor files('lib/OpModeAnnotationProcessor.jar')
 
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.7'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.4.21'
+    implementation 'com.github.StateFactory-Dev:StateFactory:0.3.6'
+    implementation 'org.team11260:fast-load:0.1.2'
 }
