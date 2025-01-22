@@ -60,8 +60,9 @@ public class Arm {
         rightFourBar.setPosition(position);
     }
 
-    void RotateWrist(int degrees) {
-        wrist.setPosition(degrees / 180f + 0.5f);
+    public void RotateWrist(double degrees) {
+        wrist.setPosition(degrees);
+        //wrist.setPosition(degrees / 180f + 0.5f);
     }
 
     double GetWristDegrees() {
@@ -69,7 +70,7 @@ public class Arm {
     }
 
     public void PrepareToGrabSpecimen() {
-        RotateFourBar(FourBarPosition.Specimen);
+        RotateFourBar(0.5);
         wrist.setPosition(WristPosition.Straight);
         claw.setPosition(ClawPosition.Open);
         GoToHeight(Height.WallPickup);
@@ -79,6 +80,12 @@ public class Arm {
         GoToHeight(Height.UPPER_BAR);
         RotateFourBar(FourBarPosition.Specimen);
         wrist.setPosition(WristPosition.Specimen);
+    }
+
+    public void PrepareToTransfer() {
+        GoToHeight(Height.DOWN);
+        RotateFourBar(FourBarPosition.Transfer);
+        RotateWrist(WristPosition.Transfer);
     }
 
     public void UpdateWallPickupHeight() {
@@ -128,9 +135,17 @@ public class Arm {
         }
     }
 
+    public void SetClawPosition(double newPosition) {
+        claw.setPosition(newPosition);
+    }
+
     public void GoToHeight(int height) {
         liftLeft.setTargetPosition(height);
-        //liftRight.setTargetPosition(height);
+        liftRight.setTargetPosition(height);
+    }
+
+    public void AdjustLiftHeight(int change) {
+        GoToHeight(liftLeft.getCurrentPosition() + change);
     }
 
     float clamp(float num, float min, float max) {
