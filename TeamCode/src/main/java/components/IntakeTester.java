@@ -10,20 +10,35 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import utils.ParsedHardwareMap;
 import utils.PressEventSystem;
 import utils.Robot;
+import utils.RobotTest;
+import utils.TestHardwareMap;
 
 @TeleOp(name = "Intaketester", group = "official")
 public class IntakeTester extends OpMode {
     Gamepad driverController;
     Gamepad assistantController;
-    Robot robot;
-    ColorSensor intakeColorSensor;
+    RobotTest robottest;
+  //  ColorSensor intakeColorSensor;
+
+    TestHardwareMap testHardwareMap;
+    PressEventSystem pressEventSystem;
 
     @Override
-    public void init() {}
+    public void init() {
+        driverController = gamepad1;
+
+        testHardwareMap = new TestHardwareMap(hardwareMap);
+        pressEventSystem = new PressEventSystem(telemetry);
+
+        robottest = new RobotTest(this, testHardwareMap, true);
+        robottest.Initialize();
+
+    }
+
 
     @Override
-    public void loop() {
-        int red1 = intakeColorSensor.red();
+    public void start() {
+    /*    int red1 = intakeColorSensor.red();
         int green1 = intakeColorSensor.green();
         int blue1 = intakeColorSensor.blue();
 
@@ -33,12 +48,13 @@ public class IntakeTester extends OpMode {
         float hue1 = hsvValues1[0];
         float saturation1 = hsvValues1[1];
         float value1 = hsvValues1[2];
-        robot = new Robot(this, hardwareMap, true);
+
+
 
 
         float minSaturation = 0.4f; // Adjust as necessary
         float minValue = 0.4f; // Adjust as necessary
-
+/*
         if (saturation1 >= minSaturation && value1 >= minValue) {
             if (hue1 >= 0 && hue1 < 65) {
                 telemetry.addData("Color 1", "Red");
@@ -58,12 +74,24 @@ public class IntakeTester extends OpMode {
             telemetry.addData("Color 1", "Unknown");
         }
 
+     */
 
-        if(gamepad1.dpad_left){
-            robot.intake.SetIntakeState((Intake.IntakeState.Intaking));
-        }
-        if(gamepad1.dpad_right){
-            robot.intake.SetIntakeState((Intake.IntakeState.Rejecting));
-        }
+        pressEventSystem.AddListener(driverController, "dpad_left", () -> robottest.intaketest.SetIntakeState(IntakeTest.IntakeTestState.Intaking));
+        pressEventSystem.AddListener(driverController, "dpad_right", () -> robottest.intaketest.SetIntakeState(IntakeTest.IntakeTestState.Rejecting));
+    }
+
+    @Override
+    public void loop() {
+        //Update utils
+      //  if (driverController.dpad_left){
+     //   } else if (driverController.dpad_right){
+     //
+     //   } else {
+
+    //    }
+
+        pressEventSystem.Update();
+        //Update components
+        robottest.Update();
     }
 }
