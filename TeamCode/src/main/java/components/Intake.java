@@ -91,9 +91,12 @@ public class Intake {
     public void Update() {
         switch (state) {
             case Intaking:
-                gate.setPosition(GatePosition.CLOSED);
+               // gate.setPosition(GatePosition.CLOSED);
+               // intake.setPower(-1);
                 intake.setPower(-1);
-
+                if (!driverController.dpad_right) {
+                    state = Intake.IntakeState.DriverControlled;
+                }
                 //Again, if intake has a sample (not white)
                 if (EnhancedColorSensor.CheckSensor(rightColorSensor, rightDistanceSensor, EnhancedColorSensor.Color.Any)) {
                     delaySystem.CreateDelay(500, () -> intake.setPower(0));
@@ -123,7 +126,7 @@ public class Intake {
                 break;
             case DriverControlled:
                 gate.setPosition(GatePosition.CLOSED);
-                double power = driverController.right_trigger - driverController.left_trigger;
+              /*  double power = driverController.right_trigger - driverController.left_trigger;
                 if (power != 0) {
                     int currentPosition = extender.getCurrentPosition();
                     int target = currentPosition + (int)Math.round(power * 500);
@@ -132,11 +135,23 @@ public class Intake {
 
                 if (intake.getPower() != 0) {
                     intake.setPower(0);
+                }*/
+                if (driverController.dpad_right) {
+                    state = Intake.IntakeState.Intaking;
                 }
+                else if (driverController.dpad_left) {
+                    state = Intake.IntakeState.Rejecting;
+                }
+                intake.setPower(0);
                 break;
             case Rejecting:
                 gate.setPosition(GatePosition.OPEN);
                 intake.setPower(1);
+                if (!driverController.dpad_left) {
+                    state = Intake.IntakeState.DriverControlled;
+                }
+
+               // intake.setPower(1);
                 break;
             case ResetTransfer:
                 if (!transferResetStarted) {
