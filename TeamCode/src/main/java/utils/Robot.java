@@ -6,14 +6,12 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import components.Arm;
 import components.Drivetrain;
 import components.Intake;
-import components.TransferPlate;
 
 public class Robot {
     public Arm arm;
     public Drivetrain drivetrain;
     public Intake intake;
     public Logger logger;
-    public TransferPlate transferPlate;
     public OpMode opMode;
     public ParsedHardwareMap parsedHardwareMap;
 
@@ -30,8 +28,7 @@ public class Robot {
         arm = new Arm(this);
         drivetrain = new Drivetrain(this);
         logger = new Logger(opMode.telemetry);
-        intake = new Intake(parsedHardwareMap, this);
-        transferPlate = new TransferPlate(this);
+        intake = new Intake(this);
 
         if (isTeleop) {
             Initialize();
@@ -42,6 +39,5 @@ public class Robot {
         arm.Update();
         drivetrain.Update();
         intake.Update();
-        transferPlate.Update();
     }
 }

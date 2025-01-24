@@ -29,7 +29,6 @@ public class Intake extends LinearOpMode {
         }
         while (!isStopRequested()) {
             flipDown.setPosition(gamepad1.y ? 1 : 0);
-            parsedHardwareMap.gate.setPosition(gamepad1.b ? 0 : 1);
             extender.setTargetPosition(extender.getCurrentPosition() - Math.round(gamepad1.right_trigger * 10));
             if (state.equals("extending")) {
                 telemetry.addLine("Extend intake with right trigger and press A/X when done");
@@ -55,7 +54,6 @@ public class Intake extends LinearOpMode {
                 telemetry.addLine("Resetting encoder...");
             }
             telemetry.addData("FlipDown Position", flipDown.getPosition());
-            telemetry.addData("Gate Position", parsedHardwareMap.gate.getPosition());
             telemetry.update();
         }
     }

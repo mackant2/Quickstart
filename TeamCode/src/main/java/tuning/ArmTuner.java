@@ -48,9 +48,7 @@ public class ArmTuner extends OpMode {
         wrist = parsedHardwareMap.wrist;
         claw = parsedHardwareMap.claw;
 
-        robot.arm.RotateFourBar(1);
-        claw.setPosition(Arm.ClawPosition.Open);
-        wrist.setPosition(0);
+        robot.arm.Reset();
     }
 
     @Override

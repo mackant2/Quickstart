@@ -48,8 +48,8 @@ public class Auto extends OpMode {
     boolean didStateAction = false;
 
     Pose[] specimenPoses = {
-        new Pose(36, 65.85, Math.toRadians(1)),
-        new Pose(36, 75.85, Math.toRadians(1))
+        new Pose(35, 65.85, Math.toRadians(1)),
+        new Pose(35, 75.85, Math.toRadians(1))
     };
 
     int goalSpecimens = 2;
@@ -68,7 +68,7 @@ public class Auto extends OpMode {
         follower = new Follower(hardwareMap);
 
         Pose startPose = new Pose(7.875, 65.85);
-        Pose grabPose = new Pose(13, 24, Math.PI);
+        Pose grabPose = new Pose(15, 24, Math.PI);
 
         follower.setStartingPose(startPose);
 

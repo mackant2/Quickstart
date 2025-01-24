@@ -17,29 +17,27 @@ import utils.Robot;
 public class Arm {
     public enum ArmState {
         DriverControlled,
-        InitiatingTransfer,
-        WaitingForSample,
-        Extracting
+        Transferring
     }
     public static class FourBarPosition {
         public static final double Transfer = 0.09;
         public static final double Extraction = 0;
-        public static final double Specimen = 0.87;
+        public static final double Specimen = 0.81;
     }
     public static class WristPosition {
         public static final double Transfer = .56;
-        public static final double Specimen = 0.58;
-        public static final double Straight = 0.42;
+        public static final double Specimen = 0.4;//.58
+        public static final double Straight = 0.5;
         public static final double SampleDrop = 0.53;
     }
     public static class Height {
         public static final int LOWER_BUCKET = 2400;
         public static final int UPPER_BUCKET = 3700;
-        public static final int UPPER_BAR = 2400;
+        public static final int UPPER_BAR = 2000;
         public static final int DOWN = 0;
         public static final int Transfer = 300;
         public static final int ExtractionComplete = 480;
-        public static int WallPickup = 600;
+        public static int WallPickup = 230;
     }
     public static class ClawPosition {
         public static final double Open = 1;
@@ -70,7 +68,7 @@ public class Arm {
     }
 
     public void PrepareToGrabSpecimen() {
-        RotateFourBar(0.5);
+        RotateFourBar(FourBarPosition.Specimen);
         wrist.setPosition(WristPosition.Straight);
         claw.setPosition(ClawPosition.Open);
         GoToHeight(Height.WallPickup);
@@ -110,13 +108,8 @@ public class Arm {
 
         stateMachine = new StateMachineBuilder()
             .state(ArmState.DriverControlled)
-            .transition(() -> stateMachine.getState() == ArmState.InitiatingTransfer)
-            .state(ArmState.InitiatingTransfer)
-            //.transition(() -> liftLeft.getCurrentPosition() <= 10 & leftFourBar.getPosition() == FourBarPosition.Transfer & wrist.getPosition() == WristPosition.Transfer)
-                .transitionTimed(2)
-                .state(ArmState.WaitingForSample)
-            .transition(() -> robot.transferPlate.sampleIsPresent)
-            .state(ArmState.Extracting)
+            .transition(() -> stateMachine.getState() == ArmState.Transferring)
+            .state(ArmState.Transferring)
             .transition(() -> leftFourBar.getPosition() == 0.5, ArmState.DriverControlled)
             .build();
     }
@@ -182,23 +175,7 @@ public class Arm {
 
                 wrist.setPosition(clamp((float)(wrist.getPosition() + (assistantController.left_trigger - assistantController.right_trigger) * 0.02), 0, 1));
             break;
-            case InitiatingTransfer:
-                if (!transferInitiated) {
-                    transferInitiated = true;
-                    GoToHeight(Height.Transfer);
-                    wrist.setPosition(WristPosition.Transfer);
-                    RotateFourBar(FourBarPosition.Transfer);
-                    claw.setPosition(ClawPosition.Open);
-                }
-            break;
-            case WaitingForSample:
-                if (transferInitiated) {
-                    //reset states so transfer can happen again
-                    transferInitiated = false;
-                    robot.intake.state = Intake.IntakeState.Transferring;
-                }
-            break;
-            case Extracting:
+            case Transferring:
                 if (!extractingEntered) {
                     //reset state
                     extractingEntered = true;
@@ -237,7 +214,7 @@ public class Arm {
     }
 
     public void HangSpecimen() {
-        GoToHeight(1600);
+        GoToHeight(1300);
     }
 
     public void ReleaseSpecimen() {
@@ -247,7 +224,8 @@ public class Arm {
 
     public void Reset() {
         GoToHeight(Height.DOWN);
-        wrist.setPosition(0.5);
-        RotateFourBar(0.5);
+        wrist.setPosition(WristPosition.Straight);
+        RotateFourBar(.5);
+        claw.setPosition(ClawPosition.Closed);
     }
 }

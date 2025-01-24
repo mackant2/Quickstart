@@ -15,10 +15,8 @@ import com.qualcomm.robotcore.hardware.TouchSensor;
 public class ParsedHardwareMap {
     public DcMotorEx frontLeft, frontRight, backLeft, backRight;
     public DcMotorEx liftLeft, liftRight, extender, intake;
-    public Servo claw, leftFourBar, rightFourBar, wrist, flipDown, gate;
+    public Servo claw, leftFourBar, rightFourBar, wrist, flipDown;
     public RevBlinkinLedDriver display;
-    public ColorSensor leftColorSensor, rightColorSensor, transferSensor;
-    public DistanceSensor leftDistanceSensor, rightDistanceSensor, transferDistanceSensor;
     public TouchSensor liftLimiter, extenderLimiter;
     public IMU imu;
     public SparkFunOTOS myOtos;
@@ -47,15 +45,8 @@ public class ParsedHardwareMap {
         rightFourBar = hardwareMap.get(Servo.class, "rightFourBar");
         wrist = hardwareMap.get(Servo.class, "wrist");
         flipDown = hardwareMap.get(Servo.class, "flipdown");
-        gate = hardwareMap.get(Servo.class, "gate");
 
         //Sensors
-        leftColorSensor = hardwareMap.get(ColorSensor.class, "leftColorSensor");
-        rightColorSensor = hardwareMap.get(ColorSensor.class, "rightColorSensor");
-        transferSensor = hardwareMap.get(ColorSensor.class, "transferSensor");
-        leftDistanceSensor = hardwareMap.get(DistanceSensor.class, "leftColorSensor");
-        rightDistanceSensor = hardwareMap.get(DistanceSensor.class, "rightColorSensor");
-        transferDistanceSensor = hardwareMap.get(DistanceSensor .class, "transferSensor");
         liftLimiter = hardwareMap.get(TouchSensor.class, "liftLimiter");
         extenderLimiter = hardwareMap.get(TouchSensor.class, "extenderLimiter");
 
@@ -83,9 +74,9 @@ public class ParsedHardwareMap {
         leftFourBar.setDirection(Servo.Direction.FORWARD);
         rightFourBar.setDirection(Servo.Direction.REVERSE);
         liftLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        liftRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        liftRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         liftLeft.setPower(1);
-        liftRight.setPower(1);
+        liftRight.setPower(0);
 
         //Configure Intake
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
