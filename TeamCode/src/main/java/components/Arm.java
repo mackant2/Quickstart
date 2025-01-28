@@ -22,6 +22,7 @@ public class Arm {
     public static class FourBarPosition {
         public static final double Transfer = 0.17;
         public static final double Extraction = 0;
+        public static final double Bucket = .63;
         public static final double SpecimenHang = 0.93;
         public static final double SpecimenGrab = 0.17;
     }
@@ -33,7 +34,7 @@ public class Arm {
     }
     public static class Height {
         public static final int LOWER_BUCKET = 2400;
-        public static final int UPPER_BUCKET = 3700;
+        public static final int UPPER_BUCKET = 3400;
         public static final int UPPER_BAR = 1800;
         public static final int DOWN = 0;
         public static final int Transfer = 300;
@@ -209,6 +210,12 @@ public class Arm {
 
     public void HangSpecimen() {
         GoToHeight(2700);
+    }
+
+    public void ScoreSample() {
+        GoToHeight(Height.UPPER_BUCKET);
+        RotateFourBar(FourBarPosition.Bucket);
+     //   RotateWrist(0);
     }
 
     public void ReleaseSpecimen() {
