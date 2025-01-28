@@ -15,7 +15,7 @@ public class Robot {
     public OpMode opMode;
     public ParsedHardwareMap parsedHardwareMap;
 
-    void Initialize() {
+    void InitializeAll() {
         //initialize four bar
         arm.Initialize();
         //flip intake up and bring in
@@ -31,7 +31,10 @@ public class Robot {
         intake = new Intake(this);
 
         if (isTeleop) {
-            Initialize();
+            InitializeAll();
+        }
+        else {
+            intake.Initialize();
         }
     }
 

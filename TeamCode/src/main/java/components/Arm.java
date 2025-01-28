@@ -20,24 +20,25 @@ public class Arm {
         Transferring
     }
     public static class FourBarPosition {
-        public static final double Transfer = 0.09;
+        public static final double Transfer = 0.17;
         public static final double Extraction = 0;
-        public static final double Specimen = 0.81;
+        public static final double SpecimenHang = 0.93;
+        public static final double SpecimenGrab = 0.17;
     }
     public static class WristPosition {
         public static final double Transfer = .56;
-        public static final double Specimen = 0.4;//.58
+        public static final double Specimen = 0.69;//.58
         public static final double Straight = 0.5;
         public static final double SampleDrop = 0.53;
     }
     public static class Height {
         public static final int LOWER_BUCKET = 2400;
         public static final int UPPER_BUCKET = 3700;
-        public static final int UPPER_BAR = 2000;
+        public static final int UPPER_BAR = 1800;
         public static final int DOWN = 0;
         public static final int Transfer = 300;
         public static final int ExtractionComplete = 480;
-        public static int WallPickup = 230;
+        public static int WallPickup = 280;
     }
     public static class ClawPosition {
         public static final double Open = 1;
@@ -54,7 +55,7 @@ public class Arm {
     Robot robot;
 
     public void RotateFourBar(double position) {
-        leftFourBar.setPosition(position);
+        leftFourBar.setPosition(1 - position);
         rightFourBar.setPosition(position);
     }
 
@@ -68,7 +69,7 @@ public class Arm {
     }
 
     public void PrepareToGrabSpecimen() {
-        RotateFourBar(FourBarPosition.Specimen);
+        RotateFourBar(FourBarPosition.SpecimenGrab);
         wrist.setPosition(WristPosition.Straight);
         claw.setPosition(ClawPosition.Open);
         GoToHeight(Height.WallPickup);
@@ -76,7 +77,7 @@ public class Arm {
 
     public void PrepareToDepositSpecimen() {
         GoToHeight(Height.UPPER_BAR);
-        RotateFourBar(FourBarPosition.Specimen);
+        RotateFourBar(FourBarPosition.SpecimenHang);
         wrist.setPosition(WristPosition.Specimen);
     }
 
@@ -110,7 +111,7 @@ public class Arm {
             .state(ArmState.DriverControlled)
             .transition(() -> stateMachine.getState() == ArmState.Transferring)
             .state(ArmState.Transferring)
-            .transition(() -> leftFourBar.getPosition() == 0.5, ArmState.DriverControlled)
+            .transition(() -> rightFourBar.getPosition() == 0.5, ArmState.DriverControlled)
             .build();
     }
 
@@ -162,15 +163,15 @@ public class Arm {
                     GoToHeight((int)clamp((float)(liftLeft.getCurrentPosition() + 1 + Math.floor(power * LIFT_MAX_DIFF)), 0, MAX_HEIGHT));
                 }
 
-                double leftPos = leftFourBar.getPosition();
+                double fourBarPosition = rightFourBar.getPosition();
                 double change = -assistantController.right_stick_y * MAX_FOURBAR_SPEED;
                 if (assistantController.right_bumper) {
                     change *= 0.5;
                 }
                 //Math.clamp causes crash here, so using custom method
-                double leftClamped = clamp((float)(leftPos + change), (float)FourBarPosition.Transfer, 1);
+                double clamped = clamp((float)(fourBarPosition + change), (float)FourBarPosition.Transfer, 1);
                 if (change != 0) {
-                    RotateFourBar(leftClamped);
+                    RotateFourBar(clamped);
                 }
 
                 wrist.setPosition(clamp((float)(wrist.getPosition() + (assistantController.left_trigger - assistantController.right_trigger) * 0.02), 0, 1));
@@ -206,26 +207,18 @@ public class Arm {
         telemetry.addData("Wrist Position", wrist.getPosition());
     }
 
-    public void GoToSpecimenPosition() {
-        claw.setPosition(ClawPosition.Closed);
-        RotateFourBar(FourBarPosition.Specimen);
-        wrist.setPosition(WristPosition.Specimen);
-        GoToHeight(Height.UPPER_BAR);
-    }
-
     public void HangSpecimen() {
-        GoToHeight(1300);
+        GoToHeight(2700);
     }
 
     public void ReleaseSpecimen() {
         claw.setPosition(ClawPosition.Open);
-        wrist.setPosition(0.5);
     }
 
     public void Reset() {
         GoToHeight(Height.DOWN);
-        wrist.setPosition(WristPosition.Straight);
-        RotateFourBar(.5);
+        wrist.setPosition(0.1);
+        RotateFourBar(FourBarPosition.Transfer);
         claw.setPosition(ClawPosition.Closed);
     }
 }

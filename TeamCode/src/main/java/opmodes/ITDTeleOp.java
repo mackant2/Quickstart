@@ -52,9 +52,12 @@ public class ITDTeleOp extends OpMode {
         //drivetrain & intake
         pressEventSystem.AddListener(driverController, "right_bumper", robot.intake::ToggleFlipdown);
         pressEventSystem.AddListener(driverController, "y", () -> robot.arm.stateMachine.setState(Arm.ArmState.Transferring));
-        pressEventSystem.AddListener(driverController, "dpad_up", robot.drivetrain::resetOrientation);
+        pressEventSystem.AddListener(driverController, "a", robot.drivetrain::resetOrientation);
         pressEventSystem.AddListener(driverController, "dpad_left", () -> robot.intake.SetIntakeState(Intake.IntakeState.Intaking));
         pressEventSystem.AddListener(driverController, "dpad_right", () -> robot.intake.SetIntakeState(Intake.IntakeState.Rejecting));
+      //  pressEventSystem.AddListener(driverController, "right_trigger", () -> robot.intake.SetIntakeState(Intake.IntakeState.Extending));
+      //  pressEventSystem.AddListener(driverController, "left_trigger", () -> robot.intake.SetIntakeState(Intake.IntakeState.Retracting));
+
     }
 
     @Override

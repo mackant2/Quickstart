@@ -18,6 +18,7 @@ public class Intake {
         DriverControlled,
         Intaking,
         Rejecting
+
     }
     public static class ExtenderPosition {
         public static final int IN = 30;
@@ -58,8 +59,7 @@ public class Intake {
     public void Initialize() {
         //Move intake to flipped up and in
         flipdown.setPosition(FlipdownPosition.UP);
-        extender.setTargetPosition(1000);
-        delaySystem.CreateDelay(500, () -> extender.setTargetPosition(ExtenderPosition.IN));
+        extender.setTargetPosition(ExtenderPosition.IN);
     }
 
     public void ToggleFlipdown() {
@@ -69,6 +69,10 @@ public class Intake {
     public void SetIntakeState(IntakeState newState) {
         state = state == newState ? IntakeState.DriverControlled : newState;
     }
+    float clamp(float num, float min, float max) {
+        return Math.max(min, Math.min(num, max));
+    }
+    //int currentPosition = extender.getCurrentPosition();
 
     public void Update() {
         switch (state) {
@@ -84,6 +88,16 @@ public class Intake {
                 }
                 else if (driverController.dpad_left) {
                     state = Intake.IntakeState.Intaking;
+                }
+                else if (driverController.right_trigger > .05) {
+                    int targetout = extender.getCurrentPosition() + (int)Math.round(driverController.right_trigger * 500);
+                    extender.setTargetPosition((int)clamp(targetout, ExtenderPosition.IN, ExtenderPosition.OUT));
+
+                }
+                else if (driverController.left_trigger > .05) {
+                    int targetin = extender.getCurrentPosition() + (int)Math.round(-driverController.left_trigger * 500);
+                    extender.setTargetPosition((int)clamp(targetin, ExtenderPosition.IN, ExtenderPosition.OUT));
+
                 }
                 intake.setPower(0);
                 break;

@@ -122,7 +122,7 @@ public class ArmTuner extends OpMode {
             case "playground":
                 double change = -gamepad1.right_stick_y * 0.01;
                 //Math.clamp causes crash here, so using custom method
-                double leftClamped = clamp((float)(leftFourBar.getPosition() + change), 0, 1);
+                double leftClamped = clamp((float)(rightFourBar.getPosition() + change), 0, 1);
                 leftFourBar.setPosition(leftClamped);
                 rightFourBar.setPosition(leftClamped);
 
@@ -147,6 +147,7 @@ public class ArmTuner extends OpMode {
                 telemetry.addData("Claw Position", claw.getPosition());
                 telemetry.addData("Four Bar Position", leftFourBar.getPosition());
                 telemetry.addData("Wrist Degrees", (wrist.getPosition() - 0.5) * 180);
+                telemetry.addData("Wrist Position", wrist.getPosition());
                 telemetry.addData("Left Lift Position", liftLeft.getCurrentPosition());
                 telemetry.addData("Left Lift Target Position", liftLeft.getTargetPosition());
                 telemetry.addData("Lift Differential", liftLeft.getCurrentPosition() - liftRight.getCurrentPosition());

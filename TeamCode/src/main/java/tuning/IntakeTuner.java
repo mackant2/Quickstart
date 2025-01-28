@@ -7,11 +7,12 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
+import components.Intake;
 import utils.ParsedHardwareMap;
 
 
 @TeleOp (group = "tuning", name = "[TUNING] Intake")
-public class Intake extends LinearOpMode {
+public class IntakeTuner extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         ParsedHardwareMap parsedHardwareMap = new ParsedHardwareMap(hardwareMap);
@@ -21,7 +22,7 @@ public class Intake extends LinearOpMode {
 
         String state = "extending";
 
-        flipDown.setPosition(0);
+        flipDown.setPosition(Intake.FlipdownPosition.UP);
 
         while (!isStarted()) {
             telemetry.addData("limit touched", limiter.isPressed());

@@ -29,7 +29,7 @@ public class ParsedHardwareMap {
         backRight = hardwareMap.get(DcMotorEx.class, "rightBack");
         liftLeft = hardwareMap.get(DcMotorEx.class, "liftLeft");
         liftRight = hardwareMap.get(DcMotorEx.class, "liftRight");
-        extender = hardwareMap.get(DcMotorEx.class, "Extendo");
+        extender = hardwareMap.get(DcMotorEx.class, "Extender");
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
 
         myOtos = hardwareMap.get(SparkFunOTOS.class, "otos");

@@ -9,24 +9,23 @@ import com.pedropathing.util.Constants;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
-import java.sql.Array;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import components.Arm;
 import pedroPathing.constants.FConstants;
 import pedroPathing.constants.LConstants;
 import utils.DelaySystem;
-import utils.Logger;
 import utils.Robot;
 
-@Autonomous(name = "Auto", group = "Opmodes")
+@Autonomous(name = "Specimen Auto", group = "Opmodes")
 public class Auto extends OpMode {
     enum AutoState {
         Idle,
-        DoingInitMove,
         ScoringSpecimen,
         DoingGrabMove,
+        GoingForGrab,
         GrabbingSpecimen,
         DoingScoreMove,
         Parking
@@ -41,15 +40,17 @@ public class Auto extends OpMode {
 
     private Follower follower;
 
-    private PathChain initPath, parkPath;
+    private PathChain parkPath, grabConfirmPath;
 
     DelaySystem delaySystem = new DelaySystem();
 
     boolean didStateAction = false;
 
+    double specimenHangX = 35;
+
     Pose[] specimenPoses = {
-        new Pose(35, 65.85, Math.toRadians(1)),
-        new Pose(35, 75.85, Math.toRadians(1))
+        new Pose(specimenHangX, 65.85),
+        new Pose(specimenHangX, 70.85)
     };
 
     int goalSpecimens = 2;
@@ -58,36 +59,48 @@ public class Auto extends OpMode {
     List<PathChain> grabPaths = new ArrayList<>();
     List<PathChain> scorePaths = new ArrayList<>();
 
+    long stateStartTime = 0;
+
     @Override
     public void init() {
         robot = new Robot(this, hardwareMap, false);
 
-        robot.arm.Reset();
+        robot.arm.SetClawPosition(Arm.ClawPosition.Closed);
 
         Constants.setConstants(FConstants.class, LConstants.class);
         follower = new Follower(hardwareMap);
 
         Pose startPose = new Pose(7.875, 65.85);
-        Pose grabPose = new Pose(15, 24, Math.PI);
+        Pose grabPose = new Pose(10, 36);
+        Pose grabConfirmPose = new Pose(7.875, 36);
 
         follower.setStartingPose(startPose);
 
-        initPath = follower.pathBuilder()
+        scorePaths.add(follower.pathBuilder()
             .addPath(
-                // Line 2
-                new BezierLine(
-                    new Point(startPose),
-                    new Point(specimenPoses[0])
-                )
+                    new BezierLine(
+                            new Point(startPose),
+                            new Point(specimenPoses[0])
+                    )
             )
-            .setTangentHeadingInterpolation()
-            .build();
+            .setConstantHeadingInterpolation(0)
+            .build());
 
         parkPath = follower.pathBuilder()
             .addPath(
                 new BezierLine(
                     new Point(specimenPoses[specimenPoses.length - 1]),
                     new Point(new Pose(10, 10))
+                )
+            )
+            .setConstantHeadingInterpolation(0)
+            .build();
+
+        grabConfirmPath = follower.pathBuilder()
+            .addPath(
+                new BezierLine(
+                    new Point(grabPose),
+                    new Point(grabConfirmPose)
                 )
             )
             .setConstantHeadingInterpolation(0)
@@ -103,46 +116,44 @@ public class Auto extends OpMode {
                                     new Point(grabPose)
                             )
                     )
-                    .setLinearHeadingInterpolation(specimenPose.getHeading(), grabPose.getHeading())
+                    .setConstantHeadingInterpolation(0)
                     .build()
             );
 
             scorePaths.add(follower.pathBuilder()
                 .addPath(
                         new BezierLine(
-                                new Point(grabPose),
-                                new Point(specimenPose)
+                                new Point(grabConfirmPose),
+                                new Point(specimenPoses[i])
                         )
                 )
-                .setLinearHeadingInterpolation(grabPose.getHeading(), specimenPose.getHeading())
+                .setConstantHeadingInterpolation(0)
                 .build()
             );
         }
+
+        delaySystem.CreateDelay(1500, robot.arm::Reset);
+    }
+
+    @Override
+    public void init_loop() {
+        follower.update();
+        delaySystem.Update();
     }
 
     @Override
     public void start() {
-        robot.arm.GoToSpecimenPosition();
-        delaySystem.CreateDelay(1000, () -> state = AutoState.DoingInitMove);
+        robot.arm.PrepareToDepositSpecimen();
+        state = AutoState.DoingScoreMove;
     }
 
     @Override public void loop() {
         switch (state) {
-            case DoingInitMove:
-                if (!didStateAction) {
-                    didStateAction = true;
-                    follower.followPath(initPath, true);
-                }
-                else if (!follower.isBusy()) {
-                    didStateAction = false;
-                    state = AutoState.ScoringSpecimen;
-                }
-                break;
             case ScoringSpecimen:
                 if (!didStateAction) {
                     didStateAction = true;
                     robot.arm.HangSpecimen();
-                    delaySystem.CreateDelay(1000, () -> {
+                    delaySystem.CreateDelay(1500, () -> {
                         robot.arm.ReleaseSpecimen();
                         specimensScored++;
                         didStateAction = false;
@@ -163,19 +174,26 @@ public class Auto extends OpMode {
                 }
                 else if (!follower.isBusy()) {
                     didStateAction = false;
-                    state = AutoState.GrabbingSpecimen;
+                    state = AutoState.GoingForGrab;
                 }
                 break;
+            case GoingForGrab:
+                if (!didStateAction) {
+                    didStateAction = true;
+                    stateStartTime = new Date().getTime();
+                    follower.followPath(grabConfirmPath);
+                }
+                else if (new Date().getTime() - stateStartTime >= 1000) {
+                    didStateAction = false;
+                    state = AutoState.GrabbingSpecimen;
+                }
             case GrabbingSpecimen:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.RotateFourBar(Arm.FourBarPosition.Specimen);
-                    delaySystem.CreateDelay(500, () -> {
-                        robot.arm.SetClawPosition(Arm.ClawPosition.Closed);
-                        delaySystem.CreateDelay(1000, () -> {
-                            didStateAction = false;
-                            state = AutoState.DoingScoreMove;
-                        });
+                    robot.arm.SetClawPosition(Arm.ClawPosition.Closed);
+                    delaySystem.CreateDelay(3000, () -> {
+                        didStateAction = false;
+                        state = AutoState.DoingScoreMove;
                     });
                 }
                 break;
@@ -183,7 +201,7 @@ public class Auto extends OpMode {
                 if (!didStateAction) {
                     didStateAction = true;
                     robot.arm.PrepareToDepositSpecimen();
-                    follower.followPath(scorePaths.get(specimensScored - 1), true);
+                    follower.followPath(scorePaths.get(specimensScored), true);
                 }
                 else if (!follower.isBusy()) {
                     didStateAction = false;
@@ -200,6 +218,8 @@ public class Auto extends OpMode {
                 }
                 break;
         }
+
+        telemetry.addData("Current Path Index", specimensScored);
 
         robot.logger.Log("X: " + follower.getPose().getX());
         robot.logger.Log("Y: " + follower.getPose().getY());

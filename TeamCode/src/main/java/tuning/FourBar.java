@@ -33,12 +33,12 @@ public class FourBar extends LinearOpMode {
 
         pressEventSystem.AddListener(gamepad1, "a", () -> claw.setPosition(claw.getPosition() == 0.8 ? 0.3 : 0.8));
         pressEventSystem.AddListener(gamepad1, "dpad_up", () -> {
-            double newPos = leftFourBar.getPosition() + 0.01;
+            double newPos = rightFourBar.getPosition() + 0.01;
             leftFourBar.setPosition(newPos);
             rightFourBar.setPosition(newPos);
         });
         pressEventSystem.AddListener(gamepad1, "dpad_down", () -> {
-           double newPos = leftFourBar.getPosition() - 0.01;
+           double newPos = rightFourBar.getPosition() - 0.01;
            leftFourBar.setPosition(newPos);
            rightFourBar.setPosition(newPos);
         });
@@ -54,14 +54,14 @@ public class FourBar extends LinearOpMode {
         while (!isStopRequested()) {
             pressEventSystem.Update();
 
-            double newPos = clamp((float)(leftFourBar.getPosition() + (gamepad1.left_trigger - gamepad1.right_trigger) / 100), 0, 1);
+            double newPos = clamp((float)(rightFourBar.getPosition() + (gamepad1.left_trigger - gamepad1.right_trigger) / 100), 0, 1);
             leftFourBar.setPosition(newPos);
             rightFourBar.setPosition(newPos);
             telemetry.addData("--BINDS--", "");
             telemetry.addData("Four Bar Binds", "A - toggle claw, triggers - move fast, D-pad up/down - increment position by 0.01");
             telemetry.addData("Wrist binds", "D-pad left/right - increment position by 0.01");
             telemetry.addData("--POSITIONS--", "");
-            telemetry.addData("Four Bar Position", leftFourBar.getPosition());
+            telemetry.addData("Four Bar Position", rightFourBar.getPosition());
             telemetry.addData("Claw Position", claw.getPosition());
             telemetry.addData("Wrist Position", wrist.getPosition());
             telemetry.addData("Lift Position", parsedHardwareMap.liftLeft.getCurrentPosition());
