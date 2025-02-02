@@ -79,7 +79,7 @@ public class Intake {
     public void Update() {
         switch (state) {
             case Intaking:
-                intake.setPower(-.1);
+                intake.setPower(-1);
                 if (!driverController.left_bumper) {
                     state = Intake.IntakeState.DriverControlled;
                 }
@@ -105,7 +105,7 @@ public class Intake {
                 intake.setPower(0);
                 break;
             case Rejecting:
-                intake.setPower(.1);
+                intake.setPower(1);
                 if (!driverController.right_bumper) {
                     state = Intake.IntakeState.DriverControlled;
                 }
