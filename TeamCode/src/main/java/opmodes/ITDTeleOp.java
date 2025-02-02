@@ -10,7 +10,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import components.Arm;
 import components.Intake;
-import utils.EnhancedColorSensor;
 import utils.ParsedHardwareMap;
 import utils.PressEventSystem;
 import utils.Robot;
@@ -42,28 +41,36 @@ public class ITDTeleOp extends OpMode {
     @Override
     public void start() {
         //lift & four bar
-        pressEventSystem.AddListener(assistantController, "a",robot.arm::ToggleClaw);
-        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.GoToHeight(Arm.Height.LOWER_BUCKET));
-        pressEventSystem.AddListener(assistantController, "b", () -> robot.arm.GoToHeight(Arm.Height.UPPER_BAR));
-        pressEventSystem.AddListener(assistantController, "y", robot.arm::PrepareToGrabSpecimen);
+        pressEventSystem.AddListener(assistantController, "right_bumper", robot.arm::ToggleClaw);
+        pressEventSystem.AddListener(assistantController, "y", () -> robot.arm.GoToHeight(Arm.Height.UPPER_BUCKET));
+        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.PresetSpecScore());
+        pressEventSystem.AddListener(assistantController, "a", robot.arm::PrepareToGrabSpecimen);
         pressEventSystem.AddListener(assistantController, "dpad_right", robot.arm::PrepareToDepositSpecimen);
         pressEventSystem.AddListener(assistantController, "dpad_down", robot.arm::UpdateWallPickupHeight);
-
+        pressEventSystem.AddListener(assistantController, "dpad_left", robot.arm::TransferPreset);
+       /* pressEventSystem.AddListener(assistantController, "dpad_left", () -> {
+            robot.intake.state = Intake.IntakeState.Transferring;
+            robot.arm.state = Arm.ArmState.Transferring;
+        });
+*/
         //drivetrain & intake
-        pressEventSystem.AddListener(driverController, "right_bumper", robot.intake::ToggleFlipdown);
-        pressEventSystem.AddListener(driverController, "y", () -> robot.arm.stateMachine.setState(Arm.ArmState.Transferring));
+        pressEventSystem.AddListener(driverController, "y", robot.intake::ToggleFlipdown);
         pressEventSystem.AddListener(driverController, "a", robot.drivetrain::resetOrientation);
-        pressEventSystem.AddListener(driverController, "dpad_left", () -> robot.intake.SetIntakeState(Intake.IntakeState.Intaking));
-        pressEventSystem.AddListener(driverController, "dpad_right", () -> robot.intake.SetIntakeState(Intake.IntakeState.Rejecting));
+      //  pressEventSystem.AddListener(driverController, "left_bumper", () -> robot.intake.SetIntakeState(Intake.IntakeState.Intaking));
+   //     pressEventSystem.AddListener(driverController, "right_bumper", () -> robot.intake.SetIntakeState(Intake.IntakeState.Rejecting));
+        pressEventSystem.AddListener(driverController, "dpad_up", robot.drivetrain::ToggleHalfSpeed);
       //  pressEventSystem.AddListener(driverController, "right_trigger", () -> robot.intake.SetIntakeState(Intake.IntakeState.Extending));
       //  pressEventSystem.AddListener(driverController, "left_trigger", () -> robot.intake.SetIntakeState(Intake.IntakeState.Retracting));
 
+        robot.parsedHardwareMap.flipDown.setPosition(0);
+        robot.parsedHardwareMap.extender.setTargetPosition(Intake.ExtenderPosition.IN);
     }
 
     @Override
     public void loop() {
         //Update utils
         pressEventSystem.Update();
+
         //Update components
         robot.Update();
     }

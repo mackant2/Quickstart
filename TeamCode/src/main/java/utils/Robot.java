@@ -14,6 +14,8 @@ public class Robot {
     public Logger logger;
     public OpMode opMode;
     public ParsedHardwareMap parsedHardwareMap;
+    public DelaySystem delaySystem = new DelaySystem();
+    boolean isTeleop;
 
     void InitializeAll() {
         //initialize four bar
@@ -23,24 +25,26 @@ public class Robot {
     }
 
     public Robot(OpMode opMode, HardwareMap hardwareMap, boolean isTeleop) {
-        this.parsedHardwareMap = new ParsedHardwareMap(hardwareMap);
         this.opMode = opMode;
+        this.parsedHardwareMap = new ParsedHardwareMap(hardwareMap);
+        this.isTeleop = isTeleop;
         arm = new Arm(this);
         drivetrain = new Drivetrain(this);
         logger = new Logger(opMode.telemetry);
         intake = new Intake(this);
 
-        if (isTeleop) {
+        if (!isTeleop) {
             InitializeAll();
-        }
-        else {
-            intake.Initialize();
         }
     }
 
     public void Update() {
-        arm.Update();
-        drivetrain.Update();
-        intake.Update();
+        if (isTeleop) {
+            arm.Update();
+            drivetrain.Update();
+            intake.Update();
+        }
+
+        delaySystem.Update();
     }
 }

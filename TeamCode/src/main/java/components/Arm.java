@@ -1,13 +1,8 @@
 package components;
 
-import androidx.annotation.NonNull;
-
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.sfdev.assembly.state.StateMachine;
-import com.sfdev.assembly.state.StateMachineBuilder;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -20,31 +15,31 @@ public class Arm {
         Transferring
     }
     public static class FourBarPosition {
-        public static final double Transfer = 0.17;
-        public static final double Extraction = 0;
-        public static final double Bucket = .63;
-        public static final double SpecimenHang = 0.93;
-        public static final double SpecimenGrab = 0.17;
+        public static final double Bucket = .68;
+        public static final double SpecimenHang = 1;
+        public static final double StraightBack = 0.21;
+        public static final double SpecPre = .53;
     }
     public static class WristPosition {
-        public static final double Transfer = .56;
+        public static final double Transfer = .86;
         public static final double Specimen = 0.69;//.58
         public static final double Straight = 0.5;
-        public static final double SampleDrop = 0.53;
+        public static final double SpecPreset = .35;
     }
     public static class Height {
         public static final int LOWER_BUCKET = 2400;
-        public static final int UPPER_BUCKET = 3400;
+        public static final int UPPER_BUCKET = 3650;
         public static final int UPPER_BAR = 1800;
         public static final int DOWN = 0;
-        public static final int Transfer = 300;
-        public static final int ExtractionComplete = 480;
-        public static int WallPickup = 280;
+        public static final int Transfer = 100;
+        public static int WallPickup = 157;
+        public static final int SpecArmPreset = 650;
     }
     public static class ClawPosition {
-        public static final double Open = 1;
+        public static final double Open = 0.9;
         public static final double Closed = 0;
     }
+    public ArmState state = ArmState.DriverControlled;
     Telemetry telemetry;
     Gamepad assistantController;
     DcMotorEx liftLeft, liftRight;
@@ -52,8 +47,8 @@ public class Arm {
     final double MAX_FOURBAR_SPEED = 0.05;
     final float MAX_HEIGHT = Height.UPPER_BUCKET;
     final int LIFT_MAX_DIFF = 400;
-    public StateMachine stateMachine;
     Robot robot;
+    boolean didStateAction = false;
 
     public void RotateFourBar(double position) {
         leftFourBar.setPosition(1 - position);
@@ -70,22 +65,37 @@ public class Arm {
     }
 
     public void PrepareToGrabSpecimen() {
-        RotateFourBar(FourBarPosition.SpecimenGrab);
+        RotateFourBar(FourBarPosition.StraightBack);
         wrist.setPosition(WristPosition.Straight);
-        claw.setPosition(ClawPosition.Open);
+        //claw.setPosition(ClawPosition.Open);
+        claw.setPosition(ClawPosition.Open); //TODO: go back to open claw position after new claw is printed and fourbar passthrough with open claw is allowed
         GoToHeight(Height.WallPickup);
+    }
+
+    public void PresetSpecScore() {
+        wrist.setPosition(WristPosition.SpecPreset);
+        RotateFourBar(FourBarPosition.SpecPre);
+        GoToHeight(Height.SpecArmPreset);
+    }
+
+    public void TransferPreset(){
+        RotateFourBar(FourBarPosition.StraightBack);
+        RotateWrist(WristPosition.Transfer);
+        GoToHeight(Height.Transfer);
+       // SetClawPosition(ClawPosition.Closed);
     }
 
     public void PrepareToDepositSpecimen() {
         GoToHeight(Height.UPPER_BAR);
-        RotateFourBar(FourBarPosition.SpecimenHang);
+        RotateFourBar(FourBarPosition.StraightBack);
         wrist.setPosition(WristPosition.Specimen);
     }
 
     public void PrepareToTransfer() {
         GoToHeight(Height.DOWN);
-        RotateFourBar(FourBarPosition.Transfer);
+        RotateFourBar(FourBarPosition.StraightBack);
         RotateWrist(WristPosition.Transfer);
+        claw.setPosition(ClawPosition.Open);
     }
 
     public void UpdateWallPickupHeight() {
@@ -107,27 +117,18 @@ public class Arm {
         rightFourBar = robot.parsedHardwareMap.rightFourBar;
         wrist = robot.parsedHardwareMap.wrist;
         claw = robot.parsedHardwareMap.claw;
-
-        stateMachine = new StateMachineBuilder()
-            .state(ArmState.DriverControlled)
-            .transition(() -> stateMachine.getState() == ArmState.Transferring)
-            .state(ArmState.Transferring)
-            .transition(() -> rightFourBar.getPosition() == 0.5, ArmState.DriverControlled)
-            .build();
     }
 
     public void Initialize() {
-        stateMachine.start();
-        GoToHeight(Height.Transfer);
-        RotateFourBar(FourBarPosition.Transfer);
-        wrist.setPosition(WristPosition.Transfer);
-        claw.setPosition(ClawPosition.Open);
+        SetClawPosition(Arm.ClawPosition.Closed);
+        robot.delaySystem.CreateDelay(1500, this::Reset);
     }
 
     public void ToggleClaw() {
-        if (stateMachine.getState() == ArmState.DriverControlled) {
+      //  if (state == ArmState.DriverControlled) {
             claw.setPosition(claw.getPosition() == ClawPosition.Open ? ClawPosition.Closed : ClawPosition.Open);
-        }
+      //  }
+     //   claw.setPosition(ClawPosition.Closed);
     }
 
     public void SetClawPosition(double newPosition) {
@@ -147,13 +148,7 @@ public class Arm {
         return Math.max(min, Math.min(num, max));
     }
 
-    boolean transferInitiated = false;
-    boolean extractingEntered = false;
-
     public void Update() {
-        stateMachine.update();
-        ArmState state = (ArmState)stateMachine.getState();
-
         switch (state) {
             case DriverControlled:
                 double power = -assistantController.left_stick_y;
@@ -170,7 +165,7 @@ public class Arm {
                     change *= 0.5;
                 }
                 //Math.clamp causes crash here, so using custom method
-                double clamped = clamp((float)(fourBarPosition + change), (float)FourBarPosition.Transfer, 1);
+                double clamped = clamp((float)(fourBarPosition + change * 0.5), (float)FourBarPosition.StraightBack, 1);
                 if (change != 0) {
                     RotateFourBar(clamped);
                 }
@@ -178,24 +173,30 @@ public class Arm {
                 wrist.setPosition(clamp((float)(wrist.getPosition() + (assistantController.left_trigger - assistantController.right_trigger) * 0.02), 0, 1));
             break;
             case Transferring:
-                if (!extractingEntered) {
-                    //reset state
-                    extractingEntered = true;
-                    claw.setPosition(ClawPosition.Closed);
-                    liftLeft.setVelocity(500);
-                    GoToHeight(Height.ExtractionComplete);
+                if (robot.parsedHardwareMap.extender.getCurrentPosition() > Intake.ExtenderPosition.IN + 30) {
+                    RotateFourBar(FourBarPosition.StraightBack);
+                    RotateWrist(WristPosition.Transfer);
+                    SetClawPosition(ClawPosition.Closed);
+                    GoToHeight(Height.Transfer + 500);
                 }
-                int liftDistanceFromTransfer = liftLeft.getCurrentPosition() - Height.Transfer;
-                int liftDistanceFromExtraction = Height.ExtractionComplete - Height.Transfer;
-                double completionPercentage = clamp((float)((double)liftDistanceFromTransfer / liftDistanceFromExtraction), 0, 1);
-                //Move both four bar and wrist to 0 throughout sample extraction from transfer plate
-                double fourBarDiff = FourBarPosition.Extraction - FourBarPosition.Transfer;
-                RotateFourBar(FourBarPosition.Transfer + completionPercentage * fourBarDiff);
-                if (completionPercentage >= 1) {
-                    extractingEntered = false;
-                    RotateFourBar(0.5);
-                    wrist.setPosition(0);
-                    liftLeft.setVelocity(1000);
+                else if (!didStateAction) {
+                    didStateAction = true;
+                    robot.delaySystem.CreateDelay(1000, () -> {
+                        SetClawPosition(ClawPosition.Open);
+                        robot.delaySystem.CreateDelay(500, () -> {
+                            GoToHeight(Height.Transfer);
+                            robot.delaySystem.CreateDelay(1000, () -> {
+                                SetClawPosition(ClawPosition.Closed);
+                                robot.delaySystem.CreateDelay(500, () -> {
+                                    GoToHeight(Height.Transfer + 1000);
+                                    robot.delaySystem.CreateDelay(500, () -> {
+                                        didStateAction = false;
+                                        state = ArmState.DriverControlled;
+                                    });
+                                });
+                            });
+                        });
+                    });
                 }
             break;
         }
@@ -215,17 +216,13 @@ public class Arm {
     public void ScoreSample() {
         GoToHeight(Height.UPPER_BUCKET);
         RotateFourBar(FourBarPosition.Bucket);
-     //   RotateWrist(0);
-    }
-
-    public void ReleaseSpecimen() {
-        claw.setPosition(ClawPosition.Open);
+        wrist.setPosition(WristPosition.Straight);
     }
 
     public void Reset() {
         GoToHeight(Height.DOWN);
         wrist.setPosition(0.1);
-        RotateFourBar(FourBarPosition.Transfer);
+        RotateFourBar(FourBarPosition.StraightBack);
         claw.setPosition(ClawPosition.Closed);
     }
 }

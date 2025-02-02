@@ -1,6 +1,7 @@
 package utils;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class DelaySystem {
@@ -20,15 +21,13 @@ public class DelaySystem {
 
     public void Update() {
         long time = System.currentTimeMillis();
-        List<DelayData> delaysToRemove = new ArrayList<>();
-        for (DelayData delayData : delays) {
-            if (time - delayData.startTime > delayData.delay) {
-                delayData.callback.fire();
-                delaysToRemove.add(delayData);
+        Iterator<DelayData> delayIterator = delays.iterator();
+        while (delayIterator.hasNext()) {
+            DelayData delay = delayIterator.next();
+            if (time - delay.startTime > delay.delay) {
+                delayIterator.remove();
+                delay.callback.fire();
             }
-        }
-        for (DelayData delayData : delaysToRemove) {
-            delays.remove(delayData);
         }
     }
 

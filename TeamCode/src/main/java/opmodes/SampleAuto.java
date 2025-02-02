@@ -53,8 +53,8 @@ public class SampleAuto extends OpMode {
         Constants.setConstants(FConstants.class, LConstants.class);
         follower = new Follower(hardwareMap);
 
-        Pose startPose = new Pose(38.88, 64.23);
-        Pose score1Pose = new Pose(6.15,125);
+        Pose startPose = new Pose(38.88, 64.23, -Math.PI / 2);
+        Pose score1Pose = new Pose(6.15,125, -Math.PI / 2);
         Pose intake1Pose = new Pose(18,125);
 
         follower.setStartingPose(startPose);
@@ -76,7 +76,7 @@ public class SampleAuto extends OpMode {
                                 new Point(intake1Pose)
                         )
                 )
-                .setConstantHeadingInterpolation(0)
+                .setLinearHeadingInterpolation(score1Pose.getHeading(), intake1Pose.getHeading())
                 .build();
 
     }
@@ -89,7 +89,7 @@ public class SampleAuto extends OpMode {
 
     @Override
     public void start() {
-    state = SampleAutoState.ScoringSample;
+        state = SampleAutoState.ScoringSample;
     }
 
     @Override public void loop() {
@@ -100,26 +100,30 @@ public class SampleAuto extends OpMode {
                     robot.arm.ScoreSample();
                     follower.followPath(score1Path);
                     delaySystem.CreateDelay(1500, () -> {
-                        robot.arm.ReleaseSpecimen();
+                        robot.arm.SetClawPosition(Arm.ClawPosition.Open);
                         sampleScored++;
                         if (sampleScored < goalSample) {
                             state = SampleAuto.SampleAutoState.Intaking;
                         }
-                        //   else {
-                        //     state = Auto.AutoState.Parking;
-                        // }
+                        /*else {
+                            state = Auto.AutoState.Parking;
+                        }*/
                     });
                 }
-                    break;
-                    case Intaking:
-                        follower.followPath(intake1Path);
-                        break;
-                    //case DoingScoreMove:
-                    //    break;
-                    //case Parking:
-                    //    break;
-                }
+                break;
+            case Intaking:
+                follower.followPath(intake1Path);
+                break;
+            /*case DoingScoreMove:
+                break;
+            case Parking:
+                break;*/
         }
+
+        follower.update();
+        delaySystem.Update();
+    }
+
     @Override
     public void stop() {
 

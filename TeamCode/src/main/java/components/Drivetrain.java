@@ -25,12 +25,14 @@ public class Drivetrain {
   double lbVelocity;
   double lfVelocity;
   DcMotorEx rightBack, rightFront, leftBack, leftFront;
-  double rotationFactor = 0.8;
+  double rotationFactor = 0.6;
   IMU imu;
   Orientation angles;
   Robot robot;
   float degree_Zero = 0;
-  double SPEED_MULT = 1.5;
+  final double SPEED_MULT = 1.5;
+  double drive_mult = 1;
+  double rot_mult = 1;
 
   SparkFunOTOS myOtos;
 
@@ -53,6 +55,12 @@ public class Drivetrain {
     imu = robot.parsedHardwareMap.imu;
   }
 
+  public void ToggleHalfSpeed() {
+    drive_mult = drive_mult == 1 ? 0.2 : 1;
+    rot_mult = rot_mult == 1 ? 0.4 : 1;
+  }
+
+
   public void Update() {
     angles = imu.getRobotOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
     double  theta = angles.firstAngle - degree_Zero;
@@ -72,12 +80,8 @@ public class Drivetrain {
     robot.opMode.telemetry.addData("angle", theta);
 
     double x1 = driverController.left_stick_x;
-    double y1 = driverController.left_stick_y;
-    if (driverController.left_bumper) {
-      x1 *= 0.2;
-      y1 *= 0.2;
-    }
-    double r = driverController.right_stick_x * rotationFactor;
+    double y1 = driverController.left_stick_y * drive_mult;
+    double r = driverController.right_stick_x * rotationFactor * rot_mult;
     double x = x1 * (Math.cos(Math.toRadians(theta))) - y1 * (Math.sin(Math.toRadians(theta)));
     double y = x1 * (Math.sin(Math.toRadians(theta))) + y1 * (Math.cos(Math.toRadians(theta)));
     rbVelocity = x - y - r;
