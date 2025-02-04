@@ -18,7 +18,7 @@ public class Arm {
         public static final double Bucket = .68;
         public static final double SpecimenHang = 1;
         public static final double StraightBack = 0.21;
-        public static final double StraightUp = 0.54;
+        public static final double StraightUp = 0.50;
     }
     public static class WristPosition {
         public static final double Transfer = .86;
