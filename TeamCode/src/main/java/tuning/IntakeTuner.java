@@ -1,6 +1,7 @@
 package tuning;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -12,50 +13,56 @@ import utils.ParsedHardwareMap;
 
 
 @TeleOp (group = "tuning", name = "[TUNING] Intake")
-public class IntakeTuner extends LinearOpMode {
-    @Override
-    public void runOpMode() throws InterruptedException {
-        ParsedHardwareMap parsedHardwareMap = new ParsedHardwareMap(hardwareMap);
-        DcMotorEx extender = parsedHardwareMap.extender;
-        Servo flipDown = parsedHardwareMap.flipDown;
-        TouchSensor limiter = parsedHardwareMap.extenderLimiter;
+public class IntakeTuner extends OpMode {
+    enum TunerState {
+        Extending,
+        Tuning,
+        ResettingEncoder,
+        Completed
+    }
 
-        String state = "extending";
+    DcMotorEx extender;
+    Servo flipDown;
+    TouchSensor limiter;
+    TunerState state = TunerState.Extending;
+
+    @Override
+    public void init() {
+        ParsedHardwareMap parsedHardwareMap = new ParsedHardwareMap(hardwareMap);
+        extender = parsedHardwareMap.extender;
+        flipDown = parsedHardwareMap.flipDown;
+        limiter = parsedHardwareMap.extenderLimiter;
 
         flipDown.setPosition(Intake.FlipdownPosition.UP);
+    }
 
-        while (!isStarted()) {
-            telemetry.addData("limit touched", limiter.isPressed());
-            telemetry.update();
-        }
-        while (!isStopRequested()) {
-            flipDown.setPosition(gamepad1.y ? 1 : 0);
-            extender.setTargetPosition(extender.getCurrentPosition() - Math.round(gamepad1.right_trigger * 10));
-            if (state.equals("extending")) {
+    @Override
+    public void loop() {
+        flipDown.setPosition(gamepad1.y ? 1 : 0);
+        switch (state) {
+            case Extending:
                 telemetry.addLine("Extend intake with right trigger and press A/X when done");
-                extender.setTargetPosition(extender.getCurrentPosition() + Math.round(gamepad1.right_trigger * 10));
+                extender.setTargetPosition(extender.getCurrentPosition() + Math.round(gamepad1.right_trigger * 50));
                 if (gamepad1.a) {
-                    state = "tuning";
+                    state = TunerState.Tuning;
                 }
-            }
-            else if (state.equals("tuning")) {
+                break;
+            case Tuning:
                 extender.setTargetPosition(extender.getCurrentPosition() - 100);
                 if (limiter.isPressed()) {
-                    state = "resetting";
+                    state = TunerState.ResettingEncoder;
                 }
-            }
-            else if (state.equals("resetting")) {
+                break;
+            case ResettingEncoder:
                 if (extender.getMode() != DcMotor.RunMode.STOP_AND_RESET_ENCODER) {
                     extender.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                 }
                 if (extender.getCurrentPosition() == 0) {
-                    state = "completed";
+                    state = TunerState.Completed;
                     requestOpModeStop();
                 }
-                telemetry.addLine("Resetting encoder...");
-            }
-            telemetry.addData("FlipDown Position", flipDown.getPosition());
-            telemetry.update();
+                break;
         }
+        telemetry.addData("State", state);
     }
 }

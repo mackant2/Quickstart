@@ -23,9 +23,7 @@ public class SampleAuto extends OpMode {
     enum SampleAutoState {
         Idle,
         ScoringSample,
-        Intaking,
-        DoingScoreMove,
-        Parking
+        Intaking
     }
     private SampleAuto.SampleAutoState state = SampleAuto.SampleAutoState.Idle;
 
@@ -36,54 +34,44 @@ public class SampleAuto extends OpMode {
 
     private Follower follower;
 
-    private PathChain score1Path, intake1Path;
+    private PathChain initPath;
 
-    DelaySystem delaySystem = new DelaySystem();
+    DelaySystem delaySystem;
 
     boolean didStateAction = false;
 
-    int goalSample = 1;
-    int sampleScored = 0;
+    int goalSamples = 1;
+    int samplesScored = 0;
     @Override
     public void init(){
         robot = new Robot(this, hardwareMap, false);
+
+        delaySystem = robot.delaySystem;
 
         robot.arm.SetClawPosition(Arm.ClawPosition.Closed);
 
         Constants.setConstants(FConstants.class, LConstants.class);
         follower = new Follower(hardwareMap);
 
-        Pose startPose = new Pose(38.88, 64.23, -Math.PI / 2);
-        Pose score1Pose = new Pose(6.15,125, -Math.PI / 2);
-        Pose intake1Pose = new Pose(18,125);
+        Pose startPose = new Pose(7.875, 113.85, Math.PI / 2);
+        Pose initScorePose = new Pose(7.875,125, Math.PI / 2);
 
         follower.setStartingPose(startPose);
 
-        score1Path = follower.pathBuilder()
+        initPath = follower.pathBuilder()
                 .addPath(
                         new BezierLine(
                                 new Point(startPose),
-                                new Point(score1Pose)
+                                new Point(initScorePose)
                         )
                 )
-                .setConstantHeadingInterpolation(0)
+                .setLinearHeadingInterpolation(startPose.getHeading(), initScorePose.getHeading())
                 .build();
-
-        intake1Path = follower.pathBuilder()
-                .addPath(
-                        new BezierLine(
-                                new Point(score1Pose),
-                                new Point(intake1Pose)
-                        )
-                )
-                .setLinearHeadingInterpolation(score1Pose.getHeading(), intake1Pose.getHeading())
-                .build();
-
     }
     @Override
     public void init_loop() {
         follower.update();
-        delaySystem.Update();
+        robot.Update();
     }
 
 
@@ -98,35 +86,34 @@ public class SampleAuto extends OpMode {
                 if (!didStateAction) {
                     didStateAction = true;
                     robot.arm.ScoreSample();
-                    follower.followPath(score1Path);
+                    follower.followPath(initPath, true);
                     delaySystem.CreateDelay(1500, () -> {
                         robot.arm.SetClawPosition(Arm.ClawPosition.Open);
-                        sampleScored++;
-                        if (sampleScored < goalSample) {
-                            state = SampleAuto.SampleAutoState.Intaking;
+                        samplesScored++;
+                        if (samplesScored < goalSamples) {
+                            didStateAction = false;
+                            state = SampleAutoState.Intaking;
                         }
-                        /*else {
-                            state = Auto.AutoState.Parking;
-                        }*/
+                        else {
+                            requestOpModeStop();
+                        }
                     });
                 }
                 break;
-            case Intaking:
-                follower.followPath(intake1Path);
-                break;
-            /*case DoingScoreMove:
-                break;
-            case Parking:
-                break;*/
         }
 
+        robot.opMode.telemetry.addData("State", state);
+
+        robot.logger.Log("X: " + follower.getPose().getX());
+        robot.logger.Log("Y: " + follower.getPose().getY());
+
         follower.update();
-        delaySystem.Update();
+        robot.Update();
     }
 
     @Override
     public void stop() {
-
+        robot.logger.close();
     }
 }
 

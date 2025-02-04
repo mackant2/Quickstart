@@ -93,13 +93,13 @@ public class Intake {
 
                 }
                 else if (driverController.right_trigger > .05) {
-                    int targetout = extender.getCurrentPosition() + (int)Math.round(driverController.right_trigger * 500);
-                    extender.setTargetPosition((int)clamp(targetout, ExtenderPosition.IN, ExtenderPosition.OUT));
+                    int target = extender.getCurrentPosition() + (int)Math.round(driverController.right_trigger * 500);
+                    extender.setTargetPosition((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT));
 
                 }
                 else if (driverController.left_trigger > .05) {
-                    int targetin = extender.getCurrentPosition() + (int)Math.round(-driverController.left_trigger * 500);
-                    extender.setTargetPosition((int)clamp(targetin, ExtenderPosition.IN, ExtenderPosition.OUT));
+                    int target = extender.getCurrentPosition() + (int)Math.round(-driverController.left_trigger * 500);
+                    extender.setTargetPosition((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT));
 
                 }
                 intake.setPower(0);

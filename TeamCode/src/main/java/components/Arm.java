@@ -18,7 +18,7 @@ public class Arm {
         public static final double Bucket = .68;
         public static final double SpecimenHang = 1;
         public static final double StraightBack = 0.21;
-        public static final double SpecPre = .53;
+        public static final double StraightUp = 0.54;
     }
     public static class WristPosition {
         public static final double Transfer = .86;
@@ -74,7 +74,7 @@ public class Arm {
 
     public void PresetSpecScore() {
         wrist.setPosition(WristPosition.SpecPreset);
-        RotateFourBar(FourBarPosition.SpecPre);
+        RotateFourBar(FourBarPosition.StraightUp);
         GoToHeight(Height.SpecArmPreset);
     }
 
@@ -222,7 +222,29 @@ public class Arm {
     public void Reset() {
         GoToHeight(Height.DOWN);
         wrist.setPosition(0.1);
-        RotateFourBar(FourBarPosition.StraightBack);
+        RotateFourBar(FourBarPosition.StraightUp);
         claw.setPosition(ClawPosition.Closed);
+    }
+
+    public void RunPreset(Preset preset) {
+        GoToHeight(preset.liftPosition);
+        RotateFourBar(preset.fourBarPosition);
+        RotateWrist(preset.wristPosition);
+    }
+
+    public static class Presets {
+        public Preset ResetUp = new Preset(Height.DOWN, FourBarPosition.StraightUp, 0.1);
+    }
+
+    static class Preset {
+        int liftPosition;
+        double fourBarPosition;
+        double wristPosition;
+
+        public Preset(int liftPosition, double fourBarPosition, double wristPosition) {
+            this.liftPosition = liftPosition;
+            this.fourBarPosition = fourBarPosition;
+            this.wristPosition = wristPosition;
+        }
     }
 }

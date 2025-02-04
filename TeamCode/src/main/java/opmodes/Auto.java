@@ -51,7 +51,7 @@ public class Auto extends OpMode {
 
     int goalSpecimens = 3;
     int specimensScored = 0;
-    double specimenHangX = 37;
+    double specimenHangX = 32;
     double specimenGap = 2;
     double startY = 65.85;
 
@@ -85,7 +85,7 @@ public class Auto extends OpMode {
             .setConstantHeadingInterpolation(0)
             .build();
 
-        for (int i = 0; i < goalSpecimens; i++) {
+        for (int i = 1; i-1 < goalSpecimens; i++) {
             specimenPoses.add(new Pose(specimenHangX, startY + specimenGap * i));
         }
 
@@ -185,7 +185,7 @@ public class Auto extends OpMode {
                 if (!didStateAction) {
                     didStateAction = true;
                     robot.arm.SetClawPosition(Arm.ClawPosition.Open); //TODO: remove after new claw is printed and fourbar passthrough with open claw is allowed
-                    follower.followPath(grabConfirmPath);
+                    follower.followPath(grabConfirmPath, true);
                 }
                 else if (!follower.isBusy()) {
                     didStateAction = false;
@@ -226,8 +226,7 @@ public class Auto extends OpMode {
 
         telemetry.addData("Specimens Scored", specimensScored);
 
-        robot.logger.Log("X: " + follower.getPose().getX());
-        robot.logger.Log("Y: " + follower.getPose().getY());
+        robot.logger.Log("X: " + follower.getPose().getX() + ", Y: " + follower.getPose().getY() + ", Heading: " + follower.getPose().getHeading());
 
         robot.Update();
         follower.update();
