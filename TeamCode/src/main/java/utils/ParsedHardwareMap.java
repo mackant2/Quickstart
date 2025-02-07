@@ -1,12 +1,11 @@
 package utils;
 
+import com.acmerobotics.roadrunner.ftc.SparkFunOTOSCorrected;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
-import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -17,7 +16,7 @@ public class ParsedHardwareMap {
     public DcMotorEx liftLeft, liftRight, extender, intake;
     public Servo claw, leftFourBar, rightFourBar, wrist, flipDown;
     public RevBlinkinLedDriver display;
-    public TouchSensor liftLimiter, extenderLimiter;
+    public TouchSensor liftLimiter, extenderLimiter, intakeLimiter;
     public IMU imu;
     public SparkFunOTOS myOtos;
 
@@ -32,7 +31,7 @@ public class ParsedHardwareMap {
         extender = hardwareMap.get(DcMotorEx.class, "Extender");
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
 
-        myOtos = hardwareMap.get(SparkFunOTOS.class, "otos");
+        myOtos = hardwareMap.get(SparkFunOTOSCorrected.class, "otos");
 
         frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -49,6 +48,7 @@ public class ParsedHardwareMap {
         //Sensors
         liftLimiter = hardwareMap.get(TouchSensor.class, "liftLimiter");
         extenderLimiter = hardwareMap.get(TouchSensor.class, "extenderLimiter");
+        intakeLimiter = hardwareMap.get(TouchSensor.class, "intakeLimiter");
 
         //LEDs
         display = hardwareMap.get(RevBlinkinLedDriver.class, "blinkin");
@@ -82,7 +82,6 @@ public class ParsedHardwareMap {
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         extender.setTargetPosition(extender.getCurrentPosition());
         extender.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        extender.setDirection(DcMotorSimple.Direction.REVERSE);
         extender.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         extender.setPower(1);
 

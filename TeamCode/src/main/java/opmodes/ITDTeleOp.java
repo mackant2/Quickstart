@@ -41,18 +41,16 @@ public class ITDTeleOp extends OpMode {
     @Override
     public void start() {
         //lift & four bar
+        pressEventSystem.AddListener(assistantController, "left_bumper", robot.arm::UpdateWallPickupHeight);
         pressEventSystem.AddListener(assistantController, "right_bumper", robot.arm::ToggleClaw);
-        pressEventSystem.AddListener(assistantController, "y", () -> robot.arm.GoToHeight(Arm.Height.UPPER_BUCKET));
-        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.PresetSpecScore());
+        pressEventSystem.AddListener(assistantController, "y", () -> robot.arm.RunPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT));
+        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.RunPreset(Arm.Presets.SPECIMEN_DEPOSIT));
         pressEventSystem.AddListener(assistantController, "a", robot.arm::PrepareToGrabSpecimen);
-        pressEventSystem.AddListener(assistantController, "dpad_right", robot.arm::PrepareToDepositSpecimen);
-        pressEventSystem.AddListener(assistantController, "dpad_down", robot.arm::UpdateWallPickupHeight);
-        pressEventSystem.AddListener(assistantController, "dpad_left", robot.arm::TransferPreset);
-       /* pressEventSystem.AddListener(assistantController, "dpad_left", () -> {
-            robot.intake.state = Intake.IntakeState.Transferring;
-            robot.arm.state = Arm.ArmState.Transferring;
-        });
-*/
+        pressEventSystem.AddListener(assistantController, "dpad_right", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT));
+        pressEventSystem.AddListener(assistantController, "dpad_down", () -> robot.arm.RunPreset(Arm.Presets.PRETRANSFER));
+        pressEventSystem.AddListener(assistantController, "dpad_left", robot.arm::Transfer);
+        pressEventSystem.AddListener(assistantController, "dpad_up", robot.arm::DepositSample);
+
         //drivetrain & intake
         pressEventSystem.AddListener(driverController, "y", robot.intake::ToggleFlipdown);
         pressEventSystem.AddListener(driverController, "a", robot.drivetrain::resetOrientation);

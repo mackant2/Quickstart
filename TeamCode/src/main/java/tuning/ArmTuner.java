@@ -48,7 +48,7 @@ public class ArmTuner extends OpMode {
         wrist = parsedHardwareMap.wrist;
         claw = parsedHardwareMap.claw;
 
-        robot.arm.Reset();
+        robot.arm.RunPreset(Arm.Presets.RESET);
     }
 
     @Override
@@ -86,13 +86,13 @@ public class ArmTuner extends OpMode {
 
                         switch (keyPosition) {
                             case "transfer":
-                                robot.arm.PrepareToTransfer();
+                                robot.arm.RunPreset(Arm.Presets.TRANSFER);
                                 break;
                             case "up":
-                                robot.arm.Reset();
+                                robot.arm.RunPreset(Arm.Presets.RESET);
                                 break;
                             case "specimen":
-                                robot.arm.PrepareToDepositSpecimen();
+                                robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
                                 break;
                             case "specimen pickup":
                                 robot.arm.PrepareToGrabSpecimen();

@@ -23,7 +23,7 @@ public class IntakeTuner extends OpMode {
 
     DcMotorEx extender;
     Servo flipDown;
-    TouchSensor limiter;
+    TouchSensor limiter, intakeLimiter;
     TunerState state = TunerState.Extending;
 
     @Override
@@ -32,6 +32,7 @@ public class IntakeTuner extends OpMode {
         extender = parsedHardwareMap.extender;
         flipDown = parsedHardwareMap.flipDown;
         limiter = parsedHardwareMap.extenderLimiter;
+        intakeLimiter = parsedHardwareMap.intakeLimiter;
 
         flipDown.setPosition(Intake.FlipdownPosition.UP);
     }
@@ -48,7 +49,7 @@ public class IntakeTuner extends OpMode {
                 }
                 break;
             case Tuning:
-                extender.setTargetPosition(extender.getCurrentPosition() - 100);
+                extender.setTargetPosition(extender.getCurrentPosition() - 25);
                 if (limiter.isPressed()) {
                     state = TunerState.ResettingEncoder;
                 }
@@ -64,5 +65,6 @@ public class IntakeTuner extends OpMode {
                 break;
         }
         telemetry.addData("State", state);
+        telemetry.addData("Intake Limiter Pressed", intakeLimiter.isPressed());
     }
 }

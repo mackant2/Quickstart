@@ -19,6 +19,10 @@ public class Intake {
         Rejecting,
         Transferring
     }
+    public enum IntakeDirection {
+        Intaking,
+        Rejecting
+    }
     public static class ExtenderPosition {
         public static final int IN = 0;
         public static final int OUT = 2000;
@@ -57,10 +61,29 @@ public class Intake {
         Reset();
     }
 
-
-
     public void ToggleFlipdown() {
         flipdown.setPosition(flipdown.getPosition() == FlipdownPosition.UP ? FlipdownPosition.DOWN : FlipdownPosition.UP);
+    }
+
+    public int GetExtenderPosition() {
+        return extender.getCurrentPosition();
+    }
+
+    public void ExtendTo(int position) {
+        SetFlipdownPosition(FlipdownPosition.UP);
+        extender.setTargetPosition(position);
+    }
+
+    public void SetFlipdownPosition(double position) {
+        flipdown.setPosition(position);
+    }
+
+    public void RunIntake(IntakeDirection direction) {
+        intake.setPower(direction == IntakeDirection.Intaking ? 1 : -1);
+    }
+
+    public void StopIntake() {
+        intake.setPower(0);
     }
 
     public void Reset() {

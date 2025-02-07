@@ -144,7 +144,7 @@ public class Auto extends OpMode {
 
     @Override
     public void start() {
-        robot.arm.PrepareToDepositSpecimen();
+        robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
         state = AutoState.DoingScoreMove;
     }
 
@@ -204,7 +204,7 @@ public class Auto extends OpMode {
             case DoingScoreMove:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.PrepareToDepositSpecimen();
+                    robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
                     PathChain scorePath = specimensScored == 0 ? initScorePath : cyclePaths.get(specimensScored - 1).get(1);
                     follower.followPath(scorePath, true);
                 }

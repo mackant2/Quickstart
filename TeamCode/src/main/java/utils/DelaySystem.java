@@ -3,11 +3,13 @@ package utils;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 public class DelaySystem {
     List<DelayData> delays = new ArrayList<>();
+    List<ConditionalDelayData> conditionalDelays = new ArrayList<>();
 
-    static class DelayData {
+    class DelayData {
         public long startTime;
         public long delay;
         public DelayCallback callback;
@@ -15,6 +17,16 @@ public class DelaySystem {
         public DelayData(long delay, DelayCallback callback) {
             startTime = System.currentTimeMillis();
             this.delay = delay;
+            this.callback = callback;
+        }
+    }
+
+    class ConditionalDelayData {
+        public BooleanSupplier equality;
+        public DelayCallback callback;
+
+        public ConditionalDelayData(BooleanSupplier equality, DelayCallback callback) {
+            this.equality = equality;
             this.callback = callback;
         }
     }
@@ -29,6 +41,14 @@ public class DelaySystem {
                 delay.callback.fire();
             }
         }
+        Iterator<ConditionalDelayData> conditionalIterator = conditionalDelays.iterator();
+        while (conditionalIterator.hasNext()) {
+            ConditionalDelayData conditionalDelay = conditionalIterator.next();
+            if (conditionalDelay.equality.getAsBoolean()) {
+                conditionalIterator.remove();
+                conditionalDelay.callback.fire();
+            }
+        }
     }
 
     public interface DelayCallback {
@@ -37,5 +57,9 @@ public class DelaySystem {
 
     public void CreateDelay(long delay, DelayCallback callback) {
         delays.add(new DelayData(delay, callback));
+    }
+
+    public void CreateConditionalDelay(BooleanSupplier equality, DelayCallback callback) {
+        conditionalDelays.add(new ConditionalDelayData(equality, callback));
     }
 }
