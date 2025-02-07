@@ -11,7 +11,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 
 import components.Arm;
@@ -21,7 +20,7 @@ import utils.DelaySystem;
 import utils.Robot;
 
 @Autonomous(name = "Specimen Auto", group = "Opmodes")
-public class Auto extends OpMode {
+public class SpecimenAuto extends OpMode {
     enum AutoState {
         Idle,
         ScoringSpecimen,
@@ -148,12 +147,17 @@ public class Auto extends OpMode {
         state = AutoState.DoingScoreMove;
     }
 
+    void TransferToState(AutoState newState) {
+        didStateAction = false;
+        state = newState;
+    }
+
     @Override public void loop() {
         switch (state) {
             case ScoringSpecimen:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.HangSpecimen();
+                    robot.arm.RunPreset(Arm.Presets.SPECIMEN_DEPOSIT);
                     delaySystem.CreateDelay(1500, () -> {
                         robot.arm.SetClawPosition(Arm.ClawPosition.Open);
                         specimensScored++;
@@ -172,24 +176,23 @@ public class Auto extends OpMode {
             case DoingGrabMove:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.PrepareToGrabSpecimen();
+                    robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_GRAB);
                     PathChain grabPath = cyclePaths.get(specimensScored - 1).get(0);
                     follower.followPath(grabPath, true);
-                }
-                else if (!follower.isBusy()) {
-                    didStateAction = false;
-                    state = AutoState.GoingForGrab;
+                    delaySystem.CreateConditionalDelay(
+                            () -> !follower.isBusy(),
+                            () -> TransferToState(AutoState.GoingForGrab)
+                    );
                 }
                 break;
             case GoingForGrab:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.SetClawPosition(Arm.ClawPosition.Open); //TODO: remove after new claw is printed and fourbar passthrough with open claw is allowed
                     follower.followPath(grabConfirmPath, true);
-                }
-                else if (!follower.isBusy()) {
-                    didStateAction = false;
-                    state = AutoState.GrabbingSpecimen;
+                    delaySystem.CreateConditionalDelay(
+                            () -> !follower.isBusy(),
+                            () -> TransferToState(AutoState.GrabbingSpecimen)
+                    );
                 }
             case GrabbingSpecimen:
                 if (!didStateAction) {
@@ -207,19 +210,20 @@ public class Auto extends OpMode {
                     robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
                     PathChain scorePath = specimensScored == 0 ? initScorePath : cyclePaths.get(specimensScored - 1).get(1);
                     follower.followPath(scorePath, true);
-                }
-                else if (!follower.isBusy()) {
-                    didStateAction = false;
-                    state = AutoState.ScoringSpecimen;
+                    delaySystem.CreateConditionalDelay(
+                            () -> !follower.isBusy(),
+                            () -> TransferToState(AutoState.ScoringSpecimen)
+                    );
                 }
                 break;
             case Parking:
                 if (!didStateAction) {
                     didStateAction = true;
                     follower.followPath(parkPath, true);
-                }
-                else if (!follower.isBusy()) {
-                    requestOpModeStop();
+                    delaySystem.CreateConditionalDelay(
+                            () -> !follower.isBusy(),
+                            this::requestOpModeStop
+                    );
                 }
                 break;
         }

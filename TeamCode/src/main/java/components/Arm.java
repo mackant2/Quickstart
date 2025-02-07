@@ -20,9 +20,7 @@ public class Arm {
         Transferring
     }
     public static class FourBarPosition {
-        public static final double Bucket = .68;
-        public static final double SpecimenHang = 1;
-        public static final double StraightBack = 0.21;
+        public static final double STRAIGHT_BACK = 0.21;
         public static final double StraightUp = 0.50;
         public static final double StraightOut = .8;
         public static final double SampleDeposit = 0.68;
@@ -30,7 +28,7 @@ public class Arm {
     public static class WristPosition {
         public static final double Transfer = .86;
         public static final double Specimen = 0.69;//.58
-        public static final double Straight = 0.5;
+        public static final double STRAIGHT = 0.5;
         public static final double SPECIMEN_DEPOSIT = .35;
         public static final double SampleDeposit = 0.3;
     }
@@ -40,8 +38,8 @@ public class Arm {
         public static final int UPPER_BAR = 1800;
         public static final int DOWN = 0;
         public static final int Transfer = 100;
-        public static int WallPickup = 157;
-        public static final int SPECIMEN_DEPOSIT = 650;
+        public static int WALL_PICKUP = 157;
+        public static final int SPECIMEN_DEPOSIT = 2700;
     }
     public static class ClawPosition {
         public static final double Open = 0.9;
@@ -72,14 +70,6 @@ public class Arm {
         return wrist.getPosition() / 180 + 0.5;
     }
 
-    public void PrepareToGrabSpecimen() {
-        RotateFourBar(FourBarPosition.StraightBack);
-        wrist.setPosition(WristPosition.Straight);
-        //claw.setPosition(ClawPosition.Open);
-        claw.setPosition(ClawPosition.Open); //TODO: go back to open claw position after new claw is printed and fourbar passthrough with open claw is allowed
-        GoToHeight(Height.WallPickup);
-    }
-
     public void DepositSample() {
         RotateFourBar(FourBarPosition.SampleDeposit);
         RotateWrist(WristPosition.SampleDeposit);
@@ -99,7 +89,7 @@ public class Arm {
 
     public void UpdateWallPickupHeight() {
         robot.logger.Log("WALL PICKUP HEIGHT: " + liftLeft.getTargetPosition());
-        Height.WallPickup = liftLeft.getTargetPosition();
+        Height.WALL_PICKUP = liftLeft.getTargetPosition();
     }
 
     public Arm(Robot robot) {
@@ -166,7 +156,7 @@ public class Arm {
             state = ArmState.DriverControlled;
         }
         //Math.clamp causes crash here, so using custom method
-        double clamped = clamp((float)(fourBarPosition + change * 0.5), (float)FourBarPosition.StraightBack, 1);
+        double clamped = clamp((float)(fourBarPosition + change * 0.5), (float)FourBarPosition.STRAIGHT_BACK, 1);
         if (change != 0) {
             if (state != ArmState.DriverControlled) {
                 state = ArmState.DriverControlled;
@@ -181,10 +171,6 @@ public class Arm {
         telemetry.addData("Lift Target", liftLeft.getTargetPosition());
         telemetry.addData("Four Bar Position", leftFourBar.getPosition());
         telemetry.addData("Wrist Position", wrist.getPosition());
-    }
-
-    public void HangSpecimen() {
-        GoToHeight(2700);
     }
 
     public int GetLiftHeight() {
@@ -239,9 +225,10 @@ public class Arm {
 
     public static class Presets {
         public static final Preset RESET = new Preset(Height.DOWN, FourBarPosition.StraightUp, 0.1, ClawPosition.Closed);
-        public static final Preset PRETRANSFER = new Preset(Height.Transfer + 200, FourBarPosition.StraightBack, WristPosition.Transfer, ClawPosition.Open);
-        public static final Preset TRANSFER = new Preset(Height.Transfer, FourBarPosition.StraightBack, WristPosition.Transfer, ClawPosition.Open);
-        public static final Preset PRE_SAMPLE_DEPOSIT = new Preset(Height.UPPER_BUCKET, FourBarPosition.StraightUp, WristPosition.Straight, ClawPosition.Closed);
+        public static final Preset PRETRANSFER = new Preset(Height.Transfer + 200, FourBarPosition.STRAIGHT_BACK, WristPosition.Transfer, ClawPosition.Open);
+        public static final Preset TRANSFER = new Preset(Height.Transfer, FourBarPosition.STRAIGHT_BACK, WristPosition.Transfer, ClawPosition.Open);
+        public static final Preset PRE_SAMPLE_DEPOSIT = new Preset(Height.UPPER_BUCKET, FourBarPosition.StraightUp, WristPosition.STRAIGHT, ClawPosition.Closed);
+        public static final Preset PRE_SPECIMEN_GRAB = new Preset(Height.WALL_PICKUP, FourBarPosition.STRAIGHT_BACK, WristPosition.STRAIGHT, ClawPosition.Open);
         public static final Preset PRE_SPECIMEN_DEPOSIT = new Preset(Height.UPPER_BAR, FourBarPosition.StraightOut, WristPosition.Specimen, ClawPosition.Closed);
         public static final Preset SPECIMEN_DEPOSIT = new Preset(Height.SPECIMEN_DEPOSIT, FourBarPosition.StraightUp, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
     }

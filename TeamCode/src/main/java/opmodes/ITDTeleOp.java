@@ -45,7 +45,7 @@ public class ITDTeleOp extends OpMode {
         pressEventSystem.AddListener(assistantController, "right_bumper", robot.arm::ToggleClaw);
         pressEventSystem.AddListener(assistantController, "y", () -> robot.arm.RunPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT));
         pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.RunPreset(Arm.Presets.SPECIMEN_DEPOSIT));
-        pressEventSystem.AddListener(assistantController, "a", robot.arm::PrepareToGrabSpecimen);
+        pressEventSystem.AddListener(assistantController, "a", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_GRAB));
         pressEventSystem.AddListener(assistantController, "dpad_right", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT));
         pressEventSystem.AddListener(assistantController, "dpad_down", () -> robot.arm.RunPreset(Arm.Presets.PRETRANSFER));
         pressEventSystem.AddListener(assistantController, "dpad_left", robot.arm::Transfer);

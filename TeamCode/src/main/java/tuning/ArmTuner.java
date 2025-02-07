@@ -95,7 +95,7 @@ public class ArmTuner extends OpMode {
                                 robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
                                 break;
                             case "specimen pickup":
-                                robot.arm.PrepareToGrabSpecimen();
+                                robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_GRAB);
                                 break;
                         }
 

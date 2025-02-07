@@ -138,7 +138,7 @@ public class SampleAuto extends OpMode {
             case MovingToBucket:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.RotateWrist(Arm.WristPosition.Straight);
+                    robot.arm.RotateWrist(Arm.WristPosition.STRAIGHT);
                     robot.arm.GoToHeight(Arm.Height.UPPER_BUCKET);
                     follower.followPath(sampleDepositPaths.get(samplesScored), true);
                 }
