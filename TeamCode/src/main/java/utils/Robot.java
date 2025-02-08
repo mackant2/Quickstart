@@ -17,6 +17,7 @@ public class Robot {
     public OpMode opMode;
     Telemetry telemetry;
     public ParsedHardwareMap parsedHardwareMap;
+    public PressEventSystem pressEventSystem;
     public DelaySystem delaySystem = new DelaySystem();
     boolean isTeleop;
 
@@ -31,7 +32,8 @@ public class Robot {
         this.opMode = opMode;
         this.parsedHardwareMap = new ParsedHardwareMap(hardwareMap);
         this.isTeleop = isTeleop;
-        telemetry = opMode.telemetry;
+        this.telemetry = opMode.telemetry;
+        this.pressEventSystem = new PressEventSystem(telemetry);
         arm = new Arm(this);
         drivetrain = new Drivetrain(this);
         logger = new Logger(opMode.telemetry);
@@ -56,5 +58,6 @@ public class Robot {
         telemetry.addData("Four Bar Position", 1 - parsedHardwareMap.leftFourBar.getPosition());
 
         delaySystem.Update();
+        pressEventSystem.Update();
     }
 }

@@ -13,7 +13,7 @@ import utils.ParsedHardwareMap;
 import utils.Robot;
 
 public class Intake {
-    public enum IntakeState {
+    public enum State {
         DriverControlled,
         Intaking,
         Rejecting,
@@ -31,7 +31,7 @@ public class Intake {
         public static final int UP = 0;
         public static final int DOWN = 1;
     }
-    public IntakeState state = IntakeState.DriverControlled;
+    public State state = State.DriverControlled;
     DcMotorEx intake, extender;
     Servo flipdown;
     RevBlinkinLedDriver display;
@@ -51,7 +51,7 @@ public class Intake {
         driverController = robot.opMode.gamepad1;
 
         stateMachine = new StateMachineBuilder()
-            .state(IntakeState.DriverControlled)
+            .state(State.DriverControlled)
             .transition(() -> driverController.right_bumper)
             .build();
     }
@@ -67,6 +67,10 @@ public class Intake {
 
     public int GetExtenderPosition() {
         return extender.getCurrentPosition();
+    }
+
+    public void AdjustExtenderPosition(int change) {
+        ExtendTo(extender.getCurrentPosition() + change);
     }
 
     public void ExtendTo(int position) {
@@ -91,9 +95,14 @@ public class Intake {
         extender.setTargetPosition(ExtenderPosition.IN);
     }
 
-    public void SetIntakeState(IntakeState newState) {
-        state = state == newState ? IntakeState.DriverControlled : newState;
+    public void SetIntakeState(State newState) {
+        state = state == newState ? State.DriverControlled : newState;
     }
+
+    public IntakeDirection getIntakeDirection() {
+        return intake.getPower() == 1 ? IntakeDirection.Intaking : IntakeDirection.Rejecting;
+    }
+
     float clamp(float num, float min, float max) {
         return Math.max(min, Math.min(num, max));
     }
@@ -104,15 +113,15 @@ public class Intake {
             case Intaking:
                 intake.setPower(-1);
                 if (!driverController.left_bumper) {
-                    state = Intake.IntakeState.DriverControlled;
+                    state = State.DriverControlled;
                 }
                 break;
             case DriverControlled:
                 if (driverController.right_bumper) {
-                    state = Intake.IntakeState.Rejecting;
+                    state = State.Rejecting;
                 }
                 else if (driverController.left_bumper) {
-                    state = Intake.IntakeState.Intaking;
+                    state = State.Intaking;
 
                 }
                 else if (driverController.right_trigger > .05) {
@@ -130,7 +139,7 @@ public class Intake {
             case Rejecting:
                 intake.setPower(1);
                 if (!driverController.right_bumper) {
-                    state = Intake.IntakeState.DriverControlled;
+                    state = State.DriverControlled;
                 }
                 break;
             case Transferring:
@@ -140,7 +149,7 @@ public class Intake {
                     didStateAction = true;
                     robot.delaySystem.CreateDelay(2000, () -> {
                         didStateAction = false;
-                        state = IntakeState.DriverControlled;
+                        state = State.DriverControlled;
                     });
                 }
         }

@@ -8,10 +8,11 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 import utils.DelaySystem;
+import utils.PressEventSystem;
 import utils.Robot;
 
 public class Arm {
-    public enum ArmState {
+    public enum State {
         DriverControlled,
         Transferring
     }
@@ -28,9 +29,10 @@ public class Arm {
         public static final double SAMPLE_DEPOSIT = 0.3;
     }
     public static class Height {
-        public static final int UPPER_BUCKET = 3650;
+        public static final int UPPER_BUCKET = 3400;
         public static final int DOWN = 0;
         public static final int TRANSFER = 100;
+        public static final int PRE_TRANSFER = 300;
         public static int WALL_PICKUP = 157;
         public static final int PRE_SPECIMEN_DEPOSIT = 920;
         public static final int SPECIMEN_DEPOSIT = 1600;
@@ -39,7 +41,7 @@ public class Arm {
         public static final double Open = 0.9;
         public static final double Closed = 0;
     }
-    public ArmState state = ArmState.DriverControlled;
+    public State state = State.DriverControlled;
     Telemetry telemetry;
     Gamepad assistantController;
     DcMotorEx liftLeft, liftRight;
@@ -67,7 +69,7 @@ public class Arm {
     public void DepositSample() {
         RotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
         RotateWrist(WristPosition.SAMPLE_DEPOSIT);
-        delaySystem.CreateDelay(1000, () -> {
+        delaySystem.CreateDelay(500, () -> {
             robot.arm.SetClawPosition(Arm.ClawPosition.Open);
         });
     }
@@ -75,7 +77,7 @@ public class Arm {
     public void DepositSample(Runnable callback) {
         RotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
         RotateWrist(WristPosition.SAMPLE_DEPOSIT);
-        delaySystem.CreateDelay(1000, () -> {
+        delaySystem.CreateDelay(500, () -> {
             robot.arm.SetClawPosition(Arm.ClawPosition.Open);
             delaySystem.CreateDelay(500, callback::run);
         });
@@ -101,6 +103,20 @@ public class Arm {
         rightFourBar = robot.parsedHardwareMap.rightFourBar;
         wrist = robot.parsedHardwareMap.wrist;
         claw = robot.parsedHardwareMap.claw;
+    }
+
+    public void RegisterControls() {
+        PressEventSystem pressEventSystem = robot.pressEventSystem;
+
+        pressEventSystem.AddListener(assistantController, "left_bumper", robot.arm::UpdateWallPickupHeight);
+        pressEventSystem.AddListener(assistantController, "right_bumper", robot.arm::ToggleClaw);
+        pressEventSystem.AddListener(assistantController, "y", () -> robot.arm.RunPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT));
+        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.RunPreset(Arm.Presets.SPECIMEN_DEPOSIT));
+        pressEventSystem.AddListener(assistantController, "a", () -> robot.arm.RunPreset(Presets.SPECIMEN_GRAB));
+        pressEventSystem.AddListener(assistantController, "dpad_right", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT));
+        pressEventSystem.AddListener(assistantController, "dpad_down", () -> robot.arm.RunPreset(Arm.Presets.PRE_TRANSFER));
+        pressEventSystem.AddListener(assistantController, "dpad_left", robot.arm::Transfer);
+        pressEventSystem.AddListener(assistantController, "dpad_up", robot.arm::DepositSample);
     }
 
     public void Initialize() {
@@ -131,8 +147,8 @@ public class Arm {
     public void Update() {
         double power = -assistantController.left_stick_y;
         if (power != 0) {
-            if (state != ArmState.DriverControlled) {
-                state = ArmState.DriverControlled;
+            if (state != State.DriverControlled) {
+                state = State.DriverControlled;
             }
             if (assistantController.left_bumper) {
                 power *= 0.2;
@@ -145,14 +161,14 @@ public class Arm {
         if (assistantController.right_bumper) {
             change *= 0.5;
         }
-        if (change != 0 && state != ArmState.DriverControlled) {
-            state = ArmState.DriverControlled;
+        if (change != 0 && state != State.DriverControlled) {
+            state = State.DriverControlled;
         }
         //Math.clamp causes crash here, so using custom method
         double clamped = clamp((float)(fourBarPosition + change * 0.5), (float)FourBarPosition.STRAIGHT_BACK, 1);
         if (change != 0) {
-            if (state != ArmState.DriverControlled) {
-                state = ArmState.DriverControlled;
+            if (state != State.DriverControlled) {
+                state = State.DriverControlled;
             }
             RotateFourBar(clamped);
         }
@@ -171,9 +187,9 @@ public class Arm {
     }
 
     public void Transfer() {
-        if (state != ArmState.Transferring) {
-            state = Arm.ArmState.Transferring;
-            RunPreset(Arm.Presets.PRETRANSFER);
+        if (state != State.Transferring) {
+            state = State.Transferring;
+            RunPreset(Arm.Presets.PRE_TRANSFER);
             robot.intake.ExtendTo(Intake.ExtenderPosition.IN);
             delaySystem.CreateConditionalDelay(
                     () -> robot.intake.GetExtenderPosition() <= Intake.ExtenderPosition.IN,
@@ -181,7 +197,7 @@ public class Arm {
                         RunPreset(Arm.Presets.TRANSFER);
                         delaySystem.CreateDelay(500, () -> {
                             SetClawPosition(Arm.ClawPosition.Closed);
-                            state = ArmState.DriverControlled;
+                            state = State.DriverControlled;
                         });
                     }
             );
@@ -189,9 +205,9 @@ public class Arm {
     }
     
     public void Transfer(Runnable callback) {
-        if (state != ArmState.Transferring) {
-            state = Arm.ArmState.Transferring;
-            RunPreset(Arm.Presets.PRETRANSFER);
+        if (state != State.Transferring) {
+            state = State.Transferring;
+            RunPreset(Presets.PRE_TRANSFER);
             robot.intake.ExtendTo(Intake.ExtenderPosition.IN);
             delaySystem.CreateConditionalDelay(
                     () -> robot.intake.GetExtenderPosition() <= Intake.ExtenderPosition.IN,
@@ -201,7 +217,7 @@ public class Arm {
                             () -> GetLiftHeight() <= Height.TRANSFER,
                             () -> {
                                 SetClawPosition(Arm.ClawPosition.Closed);
-                                state = ArmState.DriverControlled;
+                                state = State.DriverControlled;
                                 delaySystem.CreateDelay(500, callback::run);
                         });
                     }
@@ -218,10 +234,10 @@ public class Arm {
 
     public static class Presets {
         public static final Preset RESET = new Preset(Height.DOWN, FourBarPosition.STRAIGHT_UP, 0.1, ClawPosition.Closed);
-        public static final Preset PRETRANSFER = new Preset(Height.TRANSFER + 200, FourBarPosition.STRAIGHT_BACK, WristPosition.TRANSFER, ClawPosition.Open);
+        public static final Preset PRE_TRANSFER = new Preset(Height.PRE_TRANSFER, FourBarPosition.STRAIGHT_BACK, WristPosition.TRANSFER, ClawPosition.Open);
         public static final Preset TRANSFER = new Preset(Height.TRANSFER, FourBarPosition.STRAIGHT_BACK, WristPosition.TRANSFER, ClawPosition.Open);
         public static final Preset PRE_SAMPLE_DEPOSIT = new Preset(Height.UPPER_BUCKET, FourBarPosition.STRAIGHT_UP, WristPosition.STRAIGHT, ClawPosition.Closed);
-        public static final Preset PRE_SPECIMEN_GRAB = new Preset(Height.WALL_PICKUP, FourBarPosition.STRAIGHT_BACK, WristPosition.STRAIGHT, ClawPosition.Open);
+        public static final Preset SPECIMEN_GRAB = new Preset(Height.WALL_PICKUP, FourBarPosition.STRAIGHT_BACK, WristPosition.STRAIGHT, ClawPosition.Open);
         public static final Preset PRE_SPECIMEN_DEPOSIT = new Preset(Height.PRE_SPECIMEN_DEPOSIT, FourBarPosition.SPECIMEN_DEPOSIT, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
         public static final Preset SPECIMEN_DEPOSIT = new Preset(Height.SPECIMEN_DEPOSIT, FourBarPosition.SPECIMEN_DEPOSIT, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
     }

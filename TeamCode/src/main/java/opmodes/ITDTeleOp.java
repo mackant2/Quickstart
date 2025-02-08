@@ -32,7 +32,7 @@ public class ITDTeleOp extends OpMode {
         driverController = gamepad1;
         assistantController = gamepad2;
         parsedHardwareMap = new ParsedHardwareMap(hardwareMap);
-        pressEventSystem = new PressEventSystem(telemetry);
+        pressEventSystem = robot.pressEventSystem;
         otos = parsedHardwareMap.myOtos;
 
         configureOtos();
@@ -40,18 +40,8 @@ public class ITDTeleOp extends OpMode {
 
     @Override
     public void start() {
-        //lift & four bar
-        pressEventSystem.AddListener(assistantController, "left_bumper", robot.arm::UpdateWallPickupHeight);
-        pressEventSystem.AddListener(assistantController, "right_bumper", robot.arm::ToggleClaw);
-        pressEventSystem.AddListener(assistantController, "y", () -> robot.arm.RunPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT));
-        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.RunPreset(Arm.Presets.SPECIMEN_DEPOSIT));
-        pressEventSystem.AddListener(assistantController, "a", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_GRAB));
-        pressEventSystem.AddListener(assistantController, "dpad_right", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT));
-        pressEventSystem.AddListener(assistantController, "dpad_down", () -> robot.arm.RunPreset(Arm.Presets.PRETRANSFER));
-        pressEventSystem.AddListener(assistantController, "dpad_left", robot.arm::Transfer);
-        pressEventSystem.AddListener(assistantController, "dpad_up", robot.arm::DepositSample);
-
-        //drivetrain & intake
+        robot.arm.RegisterControls();
+        //drivetrain & intake - gamepad1
         pressEventSystem.AddListener(driverController, "y", robot.intake::ToggleFlipdown);
         pressEventSystem.AddListener(driverController, "a", robot.drivetrain::resetOrientation);
       //  pressEventSystem.AddListener(driverController, "left_bumper", () -> robot.intake.SetIntakeState(Intake.IntakeState.Intaking));
@@ -66,10 +56,6 @@ public class ITDTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        //Update utils
-        pressEventSystem.Update();
-
-        //Update components
         robot.Update();
     }
 

@@ -3,11 +3,9 @@ package opmodes;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.localization.Pose;
 import com.pedropathing.pathgen.BezierLine;
-import com.pedropathing.pathgen.Path;
 import com.pedropathing.pathgen.PathChain;
 import com.pedropathing.pathgen.Point;
 import com.pedropathing.util.Constants;
-import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
@@ -40,7 +38,7 @@ public class SampleAuto extends OpMode {
     private final double robotLength = 15.75;
 
     private final Pose startPose = new Pose(7.875, 113.85, Math.toRadians(90));
-    final Pose scorePose = new Pose(11.5,123.2, Math.toRadians(135));
+    final Pose scorePose = new Pose(14,128, Math.toRadians(135));
 
     private Follower follower;
 
@@ -48,12 +46,17 @@ public class SampleAuto extends OpMode {
 
     boolean didStateAction = false;
 
-    int goalSamples = 3;
+    int goalSamples = 4;
     int samplesScored = 0;
+    int rawStateIndex = 0;
+
+    int preIntakeX = 12;
+    double intakeX = 34.5;
 
     List<Pose> samplePoses = Arrays.asList(
-            new Pose(11.5, 123.1, Math.toRadians(155)),
-            new Pose(14.5, 123.2, Math.toRadians(176))
+            new Pose(preIntakeX, 120.5, Math.toRadians(180)),
+            new Pose(preIntakeX, 128.5, Math.toRadians(176)),
+            new Pose(preIntakeX, 136.5, Math.toRadians(176))
     );
 
     List<PathChain> samplePaths = new ArrayList<>();
@@ -86,7 +89,7 @@ public class SampleAuto extends OpMode {
 
         for (int i = 0; i < goalSamples - 1; i++) {
             Pose samplePose = samplePoses.get(i);
-            Pose sampleIntakePose = new Pose(samplePose.getX() + 6, samplePose.getY(), samplePose.getHeading());
+            Pose sampleIntakePose = new Pose(intakeX, samplePose.getY(), samplePose.getHeading());
             samplePaths.add(follower.pathBuilder()
                     .addPath(
                             new BezierLine(
@@ -130,6 +133,7 @@ public class SampleAuto extends OpMode {
 
     void TransferToState(SampleAutoState newState) {
         didStateAction = false;
+        rawStateIndex++;
         state = newState;
     }
 
@@ -140,7 +144,7 @@ public class SampleAuto extends OpMode {
                     didStateAction = true;
                     robot.arm.RotateWrist(Arm.WristPosition.STRAIGHT);
                     robot.arm.GoToHeight(Arm.Height.UPPER_BUCKET);
-                    follower.followPath(sampleDepositPaths.get(samplesScored), true);
+                    follower.followPath(sampleDepositPaths.get(samplesScored));
                 }
                 else if (!follower.isBusy()) {
                     TransferToState(SampleAutoState.ScoringSample);
@@ -151,8 +155,7 @@ public class SampleAuto extends OpMode {
                     didStateAction = true;
                     delaySystem.CreateConditionalDelay(
                         () -> robot.arm.GetLiftHeight() >= Arm.Height.UPPER_BUCKET,
-                        () -> {
-                            robot.arm.DepositSample(() -> {
+                        () -> robot.arm.DepositSample(() -> {
                                 samplesScored++;
                                 if (samplesScored < goalSamples) {
                                     TransferToState(SampleAutoState.MovingToSample);
@@ -160,22 +163,24 @@ public class SampleAuto extends OpMode {
                                 else {
                                     state = SampleAutoState.Parking;
                                 }
-                            });
-                        }
+                            })
                     );
                 }
                 break;
             case MovingToSample:
                 if (!didStateAction) {
                     didStateAction = true;
-                    follower.followPath(samplePaths.get(samplesScored - 1), true);
+                    robot.arm.RunPreset(Arm.Presets.PRE_TRANSFER);
                     delaySystem.CreateConditionalDelay(
-                            () -> !follower.isBusy(),
+                            () -> robot.arm.GetLiftHeight() <= Arm.Height.PRE_TRANSFER,
                             () -> {
-                                robot.intake.ExtendTo(Intake.ExtenderPosition.OUT);
+                                follower.followPath(samplePaths.get(samplesScored - 1), true);
                                 delaySystem.CreateConditionalDelay(
-                                        () -> robot.intake.GetExtenderPosition() >= Intake.ExtenderPosition.OUT,
-                                        () -> TransferToState(SampleAutoState.IntakingSample)
+                                        () -> !follower.isBusy(),
+                                        () -> {
+                                            robot.intake.RunIntake(Intake.IntakeDirection.Rejecting);
+                                            TransferToState(SampleAutoState.IntakingSample);
+                                        }
                                 );
                             }
                     );
@@ -184,32 +189,30 @@ public class SampleAuto extends OpMode {
             case IntakingSample:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.RunPreset(Arm.Presets.PRETRANSFER);
                     robot.intake.SetFlipdownPosition(Intake.FlipdownPosition.DOWN);
-                    robot.intake.RunIntake(Intake.IntakeDirection.Rejecting);
-                    follower.followPath(sampleIntakePaths.get(samplesScored - 1), true);
+                    follower.followPath(sampleIntakePaths.get(samplesScored - 1));
                     delaySystem.CreateConditionalDelay(
-                        () -> follower.getPose().getX() >= 15,
-                        () -> {
-                            robot.intake.RunIntake(Intake.IntakeDirection.Intaking);
-                            delaySystem.CreateConditionalDelay(
-                                robot.parsedHardwareMap.intakeLimiter::isPressed,
-                                () -> {
-                                    robot.intake.StopIntake();
-                                    robot.arm.Transfer(() -> {
-                                        TransferToState(SampleAutoState.MovingToBucket);
-                                    });
-                                }
-                            );
-                            delaySystem.CreateDelay(
-                                    3000,
-                                    () -> {
-                                        if (state == SampleAutoState.IntakingSample && robot.arm.state != Arm.ArmState.Transferring) {
-                                            TransferToState(SampleAutoState.Parking);
+                            () -> follower.getPose().getX() > intakeX - 8,
+                            () -> {
+                                robot.intake.RunIntake(Intake.IntakeDirection.Intaking);
+                                robot.intake.ExtendTo(Intake.ExtenderPosition.IN + 100);
+                                robot.intake.SetFlipdownPosition(Intake.FlipdownPosition.DOWN);
+                                delaySystem.CreateConditionalDelay(
+                                        robot.parsedHardwareMap.intakeLimiter::isPressed,
+                                        () -> {
+                                            robot.intake.StopIntake();
+                                            robot.arm.Transfer(() -> TransferToState(SampleAutoState.MovingToBucket));
                                         }
-                                    }
-                            );
-                        }
+                                );
+                            }
+                    );
+                    delaySystem.CreateDelay(
+                            3000,
+                            () -> {
+                                if (robot.intake.getIntakeDirection() == Intake.IntakeDirection.Intaking) {
+                                    TransferToState(SampleAutoState.Parking);
+                                }
+                            }
                     );
                 }
                 break;

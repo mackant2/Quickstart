@@ -7,7 +7,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+import java.util.Arrays;
+import java.util.List;
 
 import components.Arm;
 import utils.DelaySystem;
@@ -18,9 +19,15 @@ import utils.Robot;
 
 @TeleOp (group = "tuning", name="[TUNING] Arm")
 public class ArmTuner extends OpMode {
-    String state = "run key positions";
-    String keyPosition = "transfer";
-    Boolean scheduledNextPosition = false;
+    enum State {
+        RunPresets,
+        Playground,
+        Tuner,
+        Calibrating,
+        Resetting
+    }
+
+    State state = State.Tuner;
 
     PressEventSystem pressEventSystem = new PressEventSystem(telemetry);
     DelaySystem delaySystem = new DelaySystem();
@@ -31,9 +38,17 @@ public class ArmTuner extends OpMode {
     Servo leftFourBar, rightFourBar, wrist, claw;
     TouchSensor liftLimiter;
 
-    float clamp(float num, float min, float max) {
-        return Math.max(min, Math.min(num, max));
-    }
+    List<Arm.Preset> armPresets = Arrays.asList(
+        Arm.Presets.RESET,
+        Arm.Presets.SPECIMEN_GRAB,
+        Arm.Presets.PRE_SPECIMEN_DEPOSIT,
+        Arm.Presets.SPECIMEN_DEPOSIT,
+        Arm.Presets.PRE_TRANSFER,
+        Arm.Presets.TRANSFER,
+        Arm.Presets.PRE_SAMPLE_DEPOSIT
+    );
+    int presetIndex = 0;
+    Boolean scheduledNextPreset = false;
 
     @Override
     public void init() {
@@ -55,23 +70,25 @@ public class ArmTuner extends OpMode {
     public void init_loop() {
         telemetry.addData("Mode", state);
         telemetry.addLine("Press X/◻ for playground mode");
-        telemetry.addLine("Press B/◯ for encoder calibration mode");
-        telemetry.addLine("Press A/X for key positions testing mode");
+        telemetry.addLine("Press B/◯ for tuning mode");
+        telemetry.addLine("Press A/X for preset testing mode");
 
         if (gamepad1.x) {
-            state = "playground";
+            state = State.Playground;
         }
         else if (gamepad1.b) {
-            state = "calibrator";
+            state = State.Tuner;
         }
         else if (gamepad1.a) {
-            state = "run key positions";
+            state = State.RunPresets;
         }
     }
 
     @Override
     public void start() {
-        pressEventSystem.AddListener(gamepad1, "a", () -> claw.setPosition(claw.getPosition() == Arm.ClawPosition.Open ? Arm.ClawPosition.Closed : Arm.ClawPosition.Open));
+        if (state == State.Playground) {
+            robot.arm.RegisterControls();
+        }
     }
 
     @Override
@@ -80,81 +97,20 @@ public class ArmTuner extends OpMode {
         delaySystem.Update();
 
         switch (state) {
-            case "run key positions":
-                    if (!scheduledNextPosition) {
-                        scheduledNextPosition = true;
+            case RunPresets:
+                    if (!scheduledNextPreset) {
+                        scheduledNextPreset = true;
 
-                        switch (keyPosition) {
-                            case "transfer":
-                                robot.arm.RunPreset(Arm.Presets.TRANSFER);
-                                break;
-                            case "up":
-                                robot.arm.RunPreset(Arm.Presets.RESET);
-                                break;
-                            case "specimen":
-                                robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
-                                break;
-                            case "specimen pickup":
-                                robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_GRAB);
-                                break;
-                        }
+                        robot.arm.RunPreset(armPresets.get(presetIndex));
 
                         delaySystem.CreateDelay(3000, () -> {
-                           switch (keyPosition) {
-                               case "transfer":
-                                   keyPosition = "up";
-                                   break;
-                               case "up":
-                                   keyPosition = "specimen";
-                                   break;
-                               case "specimen":
-                                   keyPosition = "specimen pickup";
-                                   break;
-                               case "specimen pickup":
-                                   keyPosition = "transfer";
-                                   break;
-                           }
-
-                            scheduledNextPosition = false;
+                            presetIndex++;
+                            if (presetIndex == armPresets.size()) presetIndex = 0;
+                            scheduledNextPreset = false;
                         });
                     }
                 break;
-            case "playground":
-                double change = -gamepad1.right_stick_y * 0.01;
-                //Math.clamp causes crash here, so using custom method
-                double leftClamped = clamp((float)(rightFourBar.getPosition() + change), 0, 1);
-                leftFourBar.setPosition(leftClamped);
-                rightFourBar.setPosition(leftClamped);
-
-                double power = -gamepad1.left_stick_y;
-                int maxDiff = 400;
-                if (!liftLimiter.isPressed() || power > 0) {
-                    robot.arm.AdjustLiftHeight(1 + (int)Math.round(power * maxDiff));
-                }
-
-                robot.logger.Log(
-                        "Position: " + liftLeft.getCurrentPosition() +
-                                ", Position Differential (Left - Right): " + (liftLeft.getCurrentPosition() - liftRight.getCurrentPosition()) +
-                                ", Power: " + liftLeft.getPower() +
-                                ", Velocity: " + liftLeft.getVelocity() +
-                                ", Voltage (MILLIAMPS): " + liftLeft.getCurrent(CurrentUnit.MILLIAMPS));
-
-                double wristPower = gamepad1.right_trigger - gamepad1.left_trigger;
-                if (wristPower != 0) {
-                    wrist.setPosition(wrist.getPosition() + wristPower * 0.01);
-                }
-                telemetry.addLine("***WARNING*** The lift is not limited. Be careful with how far you move the lift.");
-                telemetry.addData("Claw Position", claw.getPosition());
-                telemetry.addData("Four Bar Position", leftFourBar.getPosition());
-                telemetry.addData("Wrist Degrees", (wrist.getPosition() - 0.5) * 180);
-                telemetry.addData("Wrist Position", wrist.getPosition());
-                telemetry.addData("Left Lift Position", liftLeft.getCurrentPosition());
-                telemetry.addData("Left Lift Target Position", liftLeft.getTargetPosition());
-                telemetry.addData("Lift Differential", liftLeft.getCurrentPosition() - liftRight.getCurrentPosition());
-                telemetry.addData("Left Lift Velocity", liftLeft.getVelocity());
-                telemetry.addData("Left Lift Power", liftLeft.getPower());
-                break;
-            case "calibrator":
+            case Tuner:
                 telemetry.addLine("1) Raise the arm using the right trigger");
                 telemetry.addLine("2) Press A/X when you are ready to begin the automated tuning process.");
                 double trigger = gamepad1.right_trigger;
@@ -165,22 +121,21 @@ public class ArmTuner extends OpMode {
                 telemetry.addData("Left Lift Target Position", liftLeft.getTargetPosition());
 
                 if (gamepad1.a) {
-                    state = "tuning";
+                    state = State.Calibrating;
                 }
                 break;
-            case "tuning":
+            case Calibrating:
                 robot.arm.AdjustLiftHeight(-10);
                 if (liftLimiter.isPressed()) {
-                    state = "resetting";
+                    state = State.Resetting;
                 }
                 break;
-            case "resetting":
+            case Resetting:
                 if (liftLeft.getMode() != DcMotor.RunMode.STOP_AND_RESET_ENCODER) {
                     liftLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                     liftRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                 }
                 if (liftLeft.getCurrentPosition() == 0) {
-                    state = "complete";
                     requestOpModeStop();
                 }
                 telemetry.addLine("Resetting encoder...");

@@ -270,7 +270,7 @@ public class SpecimenAuto extends OpMode {
             case DoingGrabMove:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_GRAB);
+                    robot.arm.RunPreset(Arm.Presets.SPECIMEN_GRAB);
                     PathChain grabPath = cyclePaths.get(specimensScored - 1).get(0);
                     follower.followPath(grabPath);
                     delaySystem.CreateConditionalDelay(
