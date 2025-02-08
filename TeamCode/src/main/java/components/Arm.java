@@ -7,10 +7,6 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.Map;
-
 import utils.DelaySystem;
 import utils.Robot;
 
@@ -21,25 +17,23 @@ public class Arm {
     }
     public static class FourBarPosition {
         public static final double STRAIGHT_BACK = 0.21;
-        public static final double StraightUp = 0.50;
-        public static final double StraightOut = .8;
-        public static final double SampleDeposit = 0.68;
+        public static final double STRAIGHT_UP = 0.50;
+        public static final double SAMPLE_DEPOSIT = 0.68;
+        public static final double SPECIMEN_DEPOSIT = 0.48;
     }
     public static class WristPosition {
-        public static final double Transfer = .86;
-        public static final double Specimen = 0.69;//.58
+        public static final double TRANSFER = .86;
         public static final double STRAIGHT = 0.5;
-        public static final double SPECIMEN_DEPOSIT = .35;
-        public static final double SampleDeposit = 0.3;
+        public static final double SPECIMEN_DEPOSIT = 0.15;
+        public static final double SAMPLE_DEPOSIT = 0.3;
     }
     public static class Height {
-        public static final int LOWER_BUCKET = 2400;
         public static final int UPPER_BUCKET = 3650;
-        public static final int UPPER_BAR = 1800;
         public static final int DOWN = 0;
-        public static final int Transfer = 100;
+        public static final int TRANSFER = 100;
         public static int WALL_PICKUP = 157;
-        public static final int SPECIMEN_DEPOSIT = 2700;
+        public static final int PRE_SPECIMEN_DEPOSIT = 920;
+        public static final int SPECIMEN_DEPOSIT = 1600;
     }
     public static class ClawPosition {
         public static final double Open = 0.9;
@@ -71,16 +65,16 @@ public class Arm {
     }
 
     public void DepositSample() {
-        RotateFourBar(FourBarPosition.SampleDeposit);
-        RotateWrist(WristPosition.SampleDeposit);
+        RotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
+        RotateWrist(WristPosition.SAMPLE_DEPOSIT);
         delaySystem.CreateDelay(1000, () -> {
             robot.arm.SetClawPosition(Arm.ClawPosition.Open);
         });
     }
 
     public void DepositSample(Runnable callback) {
-        RotateFourBar(FourBarPosition.SampleDeposit);
-        RotateWrist(WristPosition.SampleDeposit);
+        RotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
+        RotateWrist(WristPosition.SAMPLE_DEPOSIT);
         delaySystem.CreateDelay(1000, () -> {
             robot.arm.SetClawPosition(Arm.ClawPosition.Open);
             delaySystem.CreateDelay(500, callback::run);
@@ -110,8 +104,7 @@ public class Arm {
     }
 
     public void Initialize() {
-        SetClawPosition(Arm.ClawPosition.Closed);
-        delaySystem.CreateDelay(1500, () -> RunPreset(Presets.RESET));
+        RunPreset(Presets.RESET);
     }
 
     public void ToggleClaw() {
@@ -205,7 +198,7 @@ public class Arm {
                     () -> {
                         RunPreset(Arm.Presets.TRANSFER);
                         delaySystem.CreateConditionalDelay(
-                            () -> GetLiftHeight() <= Height.Transfer,
+                            () -> GetLiftHeight() <= Height.TRANSFER,
                             () -> {
                                 SetClawPosition(Arm.ClawPosition.Closed);
                                 state = ArmState.DriverControlled;
@@ -224,13 +217,13 @@ public class Arm {
     }
 
     public static class Presets {
-        public static final Preset RESET = new Preset(Height.DOWN, FourBarPosition.StraightUp, 0.1, ClawPosition.Closed);
-        public static final Preset PRETRANSFER = new Preset(Height.Transfer + 200, FourBarPosition.STRAIGHT_BACK, WristPosition.Transfer, ClawPosition.Open);
-        public static final Preset TRANSFER = new Preset(Height.Transfer, FourBarPosition.STRAIGHT_BACK, WristPosition.Transfer, ClawPosition.Open);
-        public static final Preset PRE_SAMPLE_DEPOSIT = new Preset(Height.UPPER_BUCKET, FourBarPosition.StraightUp, WristPosition.STRAIGHT, ClawPosition.Closed);
+        public static final Preset RESET = new Preset(Height.DOWN, FourBarPosition.STRAIGHT_UP, 0.1, ClawPosition.Closed);
+        public static final Preset PRETRANSFER = new Preset(Height.TRANSFER + 200, FourBarPosition.STRAIGHT_BACK, WristPosition.TRANSFER, ClawPosition.Open);
+        public static final Preset TRANSFER = new Preset(Height.TRANSFER, FourBarPosition.STRAIGHT_BACK, WristPosition.TRANSFER, ClawPosition.Open);
+        public static final Preset PRE_SAMPLE_DEPOSIT = new Preset(Height.UPPER_BUCKET, FourBarPosition.STRAIGHT_UP, WristPosition.STRAIGHT, ClawPosition.Closed);
         public static final Preset PRE_SPECIMEN_GRAB = new Preset(Height.WALL_PICKUP, FourBarPosition.STRAIGHT_BACK, WristPosition.STRAIGHT, ClawPosition.Open);
-        public static final Preset PRE_SPECIMEN_DEPOSIT = new Preset(Height.UPPER_BAR, FourBarPosition.StraightOut, WristPosition.Specimen, ClawPosition.Closed);
-        public static final Preset SPECIMEN_DEPOSIT = new Preset(Height.SPECIMEN_DEPOSIT, FourBarPosition.StraightUp, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
+        public static final Preset PRE_SPECIMEN_DEPOSIT = new Preset(Height.PRE_SPECIMEN_DEPOSIT, FourBarPosition.SPECIMEN_DEPOSIT, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
+        public static final Preset SPECIMEN_DEPOSIT = new Preset(Height.SPECIMEN_DEPOSIT, FourBarPosition.SPECIMEN_DEPOSIT, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
     }
 
     public static class Preset {
