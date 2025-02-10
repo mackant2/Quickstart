@@ -20,7 +20,6 @@ public class Arm {
         public static final double STRAIGHT_BACK = 0.21;
         public static final double STRAIGHT_UP = 0.50;
         public static final double SAMPLE_DEPOSIT = 0.68;
-        public static final double SPECIMEN_DEPOSIT = 0.48;
     }
     public static class WristPosition {
         public static final double TRANSFER = .86;
@@ -111,9 +110,8 @@ public class Arm {
         pressEventSystem.AddListener(assistantController, "left_bumper", robot.arm::UpdateWallPickupHeight);
         pressEventSystem.AddListener(assistantController, "right_bumper", robot.arm::ToggleClaw);
         pressEventSystem.AddListener(assistantController, "y", () -> robot.arm.RunPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT));
-        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.RunPreset(Arm.Presets.SPECIMEN_DEPOSIT));
         pressEventSystem.AddListener(assistantController, "a", () -> robot.arm.RunPreset(Presets.SPECIMEN_GRAB));
-        pressEventSystem.AddListener(assistantController, "dpad_right", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT));
+        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT));
         pressEventSystem.AddListener(assistantController, "dpad_down", () -> robot.arm.RunPreset(Arm.Presets.PRE_TRANSFER));
         pressEventSystem.AddListener(assistantController, "dpad_left", robot.arm::Transfer);
         pressEventSystem.AddListener(assistantController, "dpad_up", robot.arm::DepositSample);
@@ -192,7 +190,7 @@ public class Arm {
             RunPreset(Arm.Presets.PRE_TRANSFER);
             robot.intake.ExtendTo(Intake.ExtenderPosition.IN);
             delaySystem.CreateConditionalDelay(
-                    () -> robot.intake.GetExtenderPosition() <= Intake.ExtenderPosition.IN,
+                    robot.intake::isExtenderIn,
                     () -> {
                         RunPreset(Arm.Presets.TRANSFER);
                         delaySystem.CreateDelay(500, () -> {
@@ -210,7 +208,7 @@ public class Arm {
             RunPreset(Presets.PRE_TRANSFER);
             robot.intake.ExtendTo(Intake.ExtenderPosition.IN);
             delaySystem.CreateConditionalDelay(
-                    () -> robot.intake.GetExtenderPosition() <= Intake.ExtenderPosition.IN,
+                    robot.intake::isExtenderIn,
                     () -> {
                         RunPreset(Arm.Presets.TRANSFER);
                         delaySystem.CreateConditionalDelay(
@@ -218,7 +216,7 @@ public class Arm {
                             () -> {
                                 SetClawPosition(Arm.ClawPosition.Closed);
                                 state = State.DriverControlled;
-                                delaySystem.CreateDelay(500, callback::run);
+                                delaySystem.CreateDelay(250, callback::run);
                         });
                     }
             );
@@ -238,8 +236,8 @@ public class Arm {
         public static final Preset TRANSFER = new Preset(Height.TRANSFER, FourBarPosition.STRAIGHT_BACK, WristPosition.TRANSFER, ClawPosition.Open);
         public static final Preset PRE_SAMPLE_DEPOSIT = new Preset(Height.UPPER_BUCKET, FourBarPosition.STRAIGHT_UP, WristPosition.STRAIGHT, ClawPosition.Closed);
         public static final Preset SPECIMEN_GRAB = new Preset(Height.WALL_PICKUP, FourBarPosition.STRAIGHT_BACK, WristPosition.STRAIGHT, ClawPosition.Open);
-        public static final Preset PRE_SPECIMEN_DEPOSIT = new Preset(Height.PRE_SPECIMEN_DEPOSIT, FourBarPosition.SPECIMEN_DEPOSIT, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
-        public static final Preset SPECIMEN_DEPOSIT = new Preset(Height.SPECIMEN_DEPOSIT, FourBarPosition.SPECIMEN_DEPOSIT, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
+        public static final Preset PRE_SPECIMEN_DEPOSIT = new Preset(Height.PRE_SPECIMEN_DEPOSIT, FourBarPosition.STRAIGHT_UP, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
+        public static final Preset SPECIMEN_DEPOSIT = new Preset(Height.SPECIMEN_DEPOSIT, FourBarPosition.STRAIGHT_UP, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.Closed);
     }
 
     public static class Preset {

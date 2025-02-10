@@ -53,7 +53,7 @@ public class SpecimenAuto extends OpMode {
 
     List<Pose> specimenPoses = new ArrayList<>();
 
-    int goalSpecimens = 5;
+    int goalSpecimens = 2;
     int specimensScored = 0;
     int samplesDeposited = 0;
     double specimenHangX = 37;

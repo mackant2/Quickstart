@@ -4,6 +4,7 @@ import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.sfdev.assembly.state.StateMachine;
 import com.sfdev.assembly.state.StateMachineBuilder;
 
@@ -38,6 +39,7 @@ public class Intake {
     Robot robot;
     Gamepad driverController;
     StateMachine stateMachine;
+    TouchSensor intakeLimiter;
     boolean didStateAction = false;
 
     public Intake(Robot robot) {
@@ -49,6 +51,7 @@ public class Intake {
         display = parsedHardwareMap.display;
         extender = parsedHardwareMap.extender;
         driverController = robot.opMode.gamepad1;
+        intakeLimiter = parsedHardwareMap.intakeLimiter;
 
         stateMachine = new StateMachineBuilder()
             .state(State.DriverControlled)
@@ -83,7 +86,13 @@ public class Intake {
     }
 
     public void RunIntake(IntakeDirection direction) {
+        if (direction == IntakeDirection.Intaking && intakeLimiter.isPressed()) return;
+
         intake.setPower(direction == IntakeDirection.Intaking ? 1 : -1);
+    }
+
+    public boolean isExtenderIn() {
+        return intakeLimiter.isPressed();
     }
 
     public void StopIntake() {
@@ -110,21 +119,8 @@ public class Intake {
 
     public void Update() {
         switch (state) {
-            case Intaking:
-                intake.setPower(-1);
-                if (!driverController.left_bumper) {
-                    state = State.DriverControlled;
-                }
-                break;
             case DriverControlled:
-                if (driverController.right_bumper) {
-                    state = State.Rejecting;
-                }
-                else if (driverController.left_bumper) {
-                    state = State.Intaking;
-
-                }
-                else if (driverController.right_trigger > .05) {
+                if (driverController.right_trigger > .05) {
                     int target = extender.getCurrentPosition() + (int)Math.round(driverController.right_trigger * 500);
                     extender.setTargetPosition((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT));
 
@@ -136,12 +132,6 @@ public class Intake {
                 }
                 intake.setPower(0);
                 break;
-            case Rejecting:
-                intake.setPower(1);
-                if (!driverController.right_bumper) {
-                    state = State.DriverControlled;
-                }
-                break;
             case Transferring:
                 flipdown.setPosition(FlipdownPosition.UP);
                 extender.setTargetPosition(ExtenderPosition.IN);
@@ -152,6 +142,16 @@ public class Intake {
                         state = State.DriverControlled;
                     });
                 }
+        }
+
+        if (driverController.left_bumper) {
+            RunIntake(IntakeDirection.Rejecting);
+        }
+        else if (driverController.right_bumper && !intakeLimiter.isPressed()) {
+            RunIntake(IntakeDirection.Intaking);
+        }
+        else if (intake.getPower() != 0) {
+            StopIntake();
         }
 
         robot.opMode.telemetry.addData("Intake State", state);

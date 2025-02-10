@@ -82,7 +82,7 @@ public class ParsedHardwareMap {
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         extender.setTargetPosition(extender.getCurrentPosition());
         extender.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        extender.setDirection(DcMotorSimple.Direction.REVERSE);
+        extender.setDirection(DcMotorSimple.Direction.FORWARD);
         extender.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         extender.setPower(1);
 

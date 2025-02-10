@@ -46,7 +46,7 @@ public class SampleAuto extends OpMode {
 
     boolean didStateAction = false;
 
-    int goalSamples = 4;
+    int goalSamples = 3;
     int samplesScored = 0;
     int rawStateIndex = 0;
 
@@ -192,7 +192,7 @@ public class SampleAuto extends OpMode {
                     robot.intake.SetFlipdownPosition(Intake.FlipdownPosition.DOWN);
                     follower.followPath(sampleIntakePaths.get(samplesScored - 1));
                     delaySystem.CreateConditionalDelay(
-                            () -> follower.getPose().getX() > intakeX - 8,
+                            () -> follower.getPose().getX() > intakeX - 9,
                             () -> {
                                 robot.intake.RunIntake(Intake.IntakeDirection.Intaking);
                                 robot.intake.ExtendTo(Intake.ExtenderPosition.IN + 100);
