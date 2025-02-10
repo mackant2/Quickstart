@@ -7,6 +7,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -141,8 +143,6 @@ public class ArmTuner extends OpMode {
                 telemetry.addLine("Resetting encoder...");
                 break;
         }
-
-        robot.logger.Log()
     }
 
     @Override

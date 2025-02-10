@@ -31,7 +31,7 @@ public class Arm {
         public static final int UPPER_BUCKET = 3400;
         public static final int DOWN = 0;
         public static final int TRANSFER = 100;
-        public static final int PRE_TRANSFER = 300;
+        public static final int PRE_TRANSFER = 200;
         public static int WALL_PICKUP = 157;
         public static final int PRE_SPECIMEN_DEPOSIT = 920;
         public static final int SPECIMEN_DEPOSIT = 1600;
@@ -83,7 +83,7 @@ public class Arm {
     }
 
     public void UpdateWallPickupHeight() {
-        robot.logger.Log("WALL PICKUP HEIGHT: " + liftLeft.getTargetPosition());
+        robot.logger.log("WALL PICKUP HEIGHT: " + liftLeft.getTargetPosition());
         Height.WALL_PICKUP = liftLeft.getTargetPosition();
     }
 
@@ -178,6 +178,8 @@ public class Arm {
         telemetry.addData("Lift Target", liftLeft.getTargetPosition());
         telemetry.addData("Four Bar Position", leftFourBar.getPosition());
         telemetry.addData("Wrist Position", wrist.getPosition());
+
+        robot.logger.log("Lift Position: " + GetLiftHeight() + ", Lift Velocity: " + liftLeft.getVelocity() + ", Lift Voltage (MILLIAMPS): " + liftLeft.getCurrent(CurrentUnit.MILLIAMPS));
     }
 
     public int GetLiftHeight() {

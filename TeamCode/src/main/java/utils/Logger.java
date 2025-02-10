@@ -29,7 +29,7 @@ public class Logger {
         }
     }
 
-    public void Log(String data) {
+    public void log(String data) {
         recentLogItem.setValue(data);
         try {
             long msSinceStart = System.currentTimeMillis() - startTime;

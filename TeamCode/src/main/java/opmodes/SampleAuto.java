@@ -50,13 +50,12 @@ public class SampleAuto extends OpMode {
     int samplesScored = 0;
     int rawStateIndex = 0;
 
-    int preIntakeX = 12;
-    double intakeX = 34.5;
+    double intakeX = 16.5;
 
     List<Pose> samplePoses = Arrays.asList(
-            new Pose(preIntakeX, 120.5, Math.toRadians(180)),
-            new Pose(preIntakeX, 128.5, Math.toRadians(176)),
-            new Pose(preIntakeX, 136.5, Math.toRadians(176))
+            new Pose(intakeX, 120.5, Math.toRadians(180)),
+            new Pose(intakeX, 128.5, Math.toRadians(176)),
+            new Pose(intakeX, 136.5, Math.toRadians(176))
     );
 
     List<PathChain> samplePaths = new ArrayList<>();
@@ -192,7 +191,7 @@ public class SampleAuto extends OpMode {
                     robot.intake.SetFlipdownPosition(Intake.FlipdownPosition.DOWN);
                     follower.followPath(sampleIntakePaths.get(samplesScored - 1));
                     delaySystem.CreateConditionalDelay(
-                            () -> follower.getPose().getX() > intakeX - 9,
+                            () -> follower.getPose().getX() > intakeX - 10,
                             () -> {
                                 robot.intake.RunIntake(Intake.IntakeDirection.Intaking);
                                 robot.intake.ExtendTo(Intake.ExtenderPosition.IN + 100);
@@ -225,7 +224,7 @@ public class SampleAuto extends OpMode {
         robot.opMode.telemetry.addData("Samples scored", samplesScored);
         telemetry.addData("Robot is moving", follower.isBusy());
 
-        robot.logger.Log("X: " + follower.getPose().getX() + ", Y: " + follower.getPose().getY() + ", Heading: " + follower.getPose().getHeading());
+        robot.logger.log("X: " + follower.getPose().getX() + ", Y: " + follower.getPose().getY() + ", Heading: " + follower.getPose().getHeading());
 
         follower.update();
         robot.Update();

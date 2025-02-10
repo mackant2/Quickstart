@@ -44,6 +44,7 @@ public class ITDTeleOp extends OpMode {
         //drivetrain & intake - gamepad1
         pressEventSystem.AddListener(driverController, "y", robot.intake::ToggleFlipdown);
         pressEventSystem.AddListener(driverController, "a", robot.drivetrain::resetOrientation);
+        pressEventSystem.AddListener(driverController, "dpad_down", robot.arm::Transfer);
         pressEventSystem.AddListener(driverController, "dpad_up", robot.drivetrain::ToggleHalfSpeed);
 
         robot.parsedHardwareMap.flipDown.setPosition(0);

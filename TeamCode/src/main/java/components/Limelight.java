@@ -161,7 +161,7 @@ public class Limelight extends LinearOpMode {
                         DataTyNC = negativeFormat.format(result.getTyNC());
                     }
 
-                    logger.Log("tx = " + DataTx + "  txnc = " + DataTxNC + "  ty = " + DataTy + "  tync = " + DataTyNC);
+                    logger.log("tx = " + DataTx + "  txnc = " + DataTxNC + "  ty = " + DataTy + "  tync = " + DataTyNC);
 
                     // Access barcode results
                     List<LLResultTypes.BarcodeResult> barcodeResults = result.getBarcodeResults();

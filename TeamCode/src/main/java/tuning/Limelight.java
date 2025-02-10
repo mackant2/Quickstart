@@ -130,9 +130,9 @@ public class Limelight extends LinearOpMode {
 
                     telemetry.addData("Botpose", botpose.toString());
 
-                    logger.Log(String.valueOf(result.getTx()) + " Tx");
-                    logger.Log(String.valueOf(result.getTy()) + " Ty");
-                    logger.Log(botpose.toString() + " botpose");
+                    logger.log(String.valueOf(result.getTx()) + " Tx");
+                    logger.log(String.valueOf(result.getTy()) + " Ty");
+                    logger.log(botpose.toString() + " botpose");
 
                     loops = loops + 1;
 
