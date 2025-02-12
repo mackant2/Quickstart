@@ -39,8 +39,10 @@ public class Intake {
     Robot robot;
     Gamepad driverController;
     StateMachine stateMachine;
-    TouchSensor intakeLimiter;
+    TouchSensor intakeLimiter, extenderLimiter;
     boolean didStateAction = false;
+    public int extenderPosition;
+    int extenderTarget;
 
     public Intake(Robot robot) {
         ParsedHardwareMap parsedHardwareMap = robot.parsedHardwareMap;
@@ -51,6 +53,7 @@ public class Intake {
         display = parsedHardwareMap.display;
         extender = parsedHardwareMap.extender;
         driverController = robot.opMode.gamepad1;
+        extenderLimiter = parsedHardwareMap.extenderLimiter;
         intakeLimiter = parsedHardwareMap.intakeLimiter;
 
         stateMachine = new StateMachineBuilder()
@@ -59,26 +62,47 @@ public class Intake {
             .build();
     }
 
-    public void Initialize() {
-        //Move intake to flipped up and in
-        Reset();
-    }
-
-    public void ToggleFlipdown() {
+    public void toggleFlipdown() {
         flipdown.setPosition(flipdown.getPosition() == FlipdownPosition.UP ? FlipdownPosition.DOWN : FlipdownPosition.UP);
     }
 
-    public int GetExtenderPosition() {
-        return extender.getCurrentPosition();
+    public void adjustExtenderPosition(int change) {
+        extendTo(extenderPosition + change);
     }
 
-    public void AdjustExtenderPosition(int change) {
-        ExtendTo(extender.getCurrentPosition() + change);
-    }
-
-    public void ExtendTo(int position) {
+    public void extendTo(int position) {
+        if (extenderPosition == position) return;
+        extenderPosition = position;
         SetFlipdownPosition(FlipdownPosition.UP);
-        extender.setTargetPosition(position);
+        extender.setTargetPosition(extenderPosition);
+    }
+
+    public void runMarchingIntake(int startPosition, Runnable callback, Runnable failedCallback) {
+        extendTo(startPosition);
+        robot.delaySystem.createConditionalDelay(
+                () -> extenderPosition >= startPosition - 10,
+                () -> {
+                    robot.intake.setExtenderVelocity(200);
+                    robot.intake.extendTo(ExtenderPosition.OUT);
+                    SetFlipdownPosition(FlipdownPosition.DOWN);
+                    RunIntake(IntakeDirection.Intaking);
+                    robot.delaySystem.createConditionalDelay(
+                            () -> this.hasSample() || extenderPosition >= ExtenderPosition.OUT - 10,
+                        () -> {
+                            if (this.hasSample()) {
+                                stopIntake();
+                                robot.intake.setExtenderVelocity(1000);
+                                callback.run();
+                            }
+                            else {
+                                stopIntake();
+                                robot.intake.setExtenderVelocity(1000);
+                                failedCallback.run();
+                            }
+                        }
+                    );
+                }
+        );
     }
 
     public void SetFlipdownPosition(double position) {
@@ -92,52 +116,51 @@ public class Intake {
     }
 
     public boolean isExtenderIn() {
+        return extenderPosition <= ExtenderPosition.IN + 20;
+    }
+
+    public boolean hasSample() {
         return intakeLimiter.isPressed();
     }
 
-    public void StopIntake() {
+    public void stopIntake() {
         intake.setPower(0);
     }
 
-    public void Reset() {
+    public void reset() {
         flipdown.setPosition(FlipdownPosition.UP);
-        extender.setTargetPosition(ExtenderPosition.IN);
+        extendTo(ExtenderPosition.IN);
     }
 
-    public void SetIntakeState(State newState) {
-        state = state == newState ? State.DriverControlled : newState;
-    }
-
-    public IntakeDirection getIntakeDirection() {
-        return intake.getPower() == 1 ? IntakeDirection.Intaking : IntakeDirection.Rejecting;
+    public void setExtenderVelocity(int velocity) {
+        extender.setVelocity(velocity);
     }
 
     float clamp(float num, float min, float max) {
         return Math.max(min, Math.min(num, max));
     }
-    //int currentPosition = extender.getCurrentPosition();
 
-    public void Update() {
+    public void update() {
         switch (state) {
             case DriverControlled:
                 if (driverController.right_trigger > .05) {
-                    int target = extender.getCurrentPosition() + (int)Math.round(driverController.right_trigger * 500);
-                    extender.setTargetPosition((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT));
+                    int target = extenderPosition + (int)Math.round(driverController.right_trigger * 500);
+                    extendTo(((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT)));
 
                 }
                 else if (driverController.left_trigger > .05) {
-                    int target = extender.getCurrentPosition() + (int)Math.round(-driverController.left_trigger * 500);
-                    extender.setTargetPosition((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT));
+                    int target = extenderPosition + (int)Math.round(-driverController.left_trigger * 500);
+                    extendTo((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT));
 
                 }
                 intake.setPower(0);
                 break;
             case Transferring:
                 flipdown.setPosition(FlipdownPosition.UP);
-                extender.setTargetPosition(ExtenderPosition.IN);
-                if (extender.getCurrentPosition() > ExtenderPosition.IN + 30 && !didStateAction) {
+                extendTo(ExtenderPosition.IN);
+                if (extenderPosition > ExtenderPosition.IN + 30 && !didStateAction) {
                     didStateAction = true;
-                    robot.delaySystem.CreateDelay(2000, () -> {
+                    robot.delaySystem.createDelay(2000, () -> {
                         didStateAction = false;
                         state = State.DriverControlled;
                     });
@@ -151,15 +174,20 @@ public class Intake {
             RunIntake(IntakeDirection.Intaking);
         }
         else if (intake.getPower() != 0) {
-            StopIntake();
+            stopIntake();
         }
 
         robot.opMode.telemetry.addData("Intake State", state);
         robot.opMode.telemetry.addData("Intake Power", intake.getPower());
         robot.opMode.telemetry.addData("Extender Voltage (MILLIAMPS)", extender.getCurrent(CurrentUnit.MILLIAMPS));
         robot.opMode.telemetry.addData("Extender Velocity", extender.getVelocity());
-        robot.opMode.telemetry.addData("Extender Position", extender.getCurrentPosition());
-        robot.opMode.telemetry.addData("Extender Target Position", extender.getTargetPosition());
+        robot.opMode.telemetry.addData("Extender Position", extenderPosition);
+        robot.opMode.telemetry.addData("Extender Target Position", extenderTarget);
         robot.opMode.telemetry.addData("Extender Power", extender.getPower());
+    }
+
+    public void internalUpdate() {
+        extenderPosition = extender.getCurrentPosition();
+        extenderTarget = extender.getTargetPosition();
     }
 }

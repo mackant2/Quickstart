@@ -12,9 +12,9 @@ public class DelaySystem {
     class DelayData {
         public long startTime;
         public long delay;
-        public DelayCallback callback;
+        public Runnable callback;
 
-        public DelayData(long delay, DelayCallback callback) {
+        public DelayData(long delay, Runnable callback) {
             startTime = System.currentTimeMillis();
             this.delay = delay;
             this.callback = callback;
@@ -23,43 +23,58 @@ public class DelaySystem {
 
     class ConditionalDelayData {
         public BooleanSupplier equality;
-        public DelayCallback callback;
+        public Runnable callback;
+        public long startTime;
+        public long timeout = -1;
+        public Runnable timeoutCallback;
 
-        public ConditionalDelayData(BooleanSupplier equality, DelayCallback callback) {
+        public ConditionalDelayData(BooleanSupplier equality, Runnable callback) {
             this.equality = equality;
             this.callback = callback;
         }
+
+        public ConditionalDelayData(BooleanSupplier equality, Runnable callback, long timeout, Runnable timeoutCallback) {
+            startTime = System.currentTimeMillis();
+            this.equality = equality;
+            this.callback = callback;
+            this.timeout = timeout;
+            this.timeoutCallback = timeoutCallback;
+        }
     }
 
-    public void Update() {
+    public void update() {
         long time = System.currentTimeMillis();
         Iterator<DelayData> delayIterator = delays.iterator();
         while (delayIterator.hasNext()) {
             DelayData delay = delayIterator.next();
-            if (time - delay.startTime > delay.delay) {
+            if (time - delay.startTime >= delay.delay) {
                 delayIterator.remove();
-                delay.callback.fire();
+                delay.callback.run();
             }
         }
         Iterator<ConditionalDelayData> conditionalIterator = conditionalDelays.iterator();
         while (conditionalIterator.hasNext()) {
-            ConditionalDelayData conditionalDelay = conditionalIterator.next();
-            if (conditionalDelay.equality.getAsBoolean()) {
+            ConditionalDelayData delay = conditionalIterator.next();
+            if (delay.equality.getAsBoolean()) {
                 conditionalIterator.remove();
-                conditionalDelay.callback.fire();
+                delay.callback.run();
+            }
+            else if (delay.timeout > -1 && time - delay.startTime >= delay.timeout) {
+                conditionalIterator.remove();
+                delay.timeoutCallback.run();
             }
         }
     }
 
-    public interface DelayCallback {
-        void fire();
-    }
-
-    public void CreateDelay(long delay, DelayCallback callback) {
+    public void createDelay(long delay, Runnable callback) {
         delays.add(new DelayData(delay, callback));
     }
 
-    public void CreateConditionalDelay(BooleanSupplier equality, DelayCallback callback) {
+    public void createConditionalDelay(BooleanSupplier equality, Runnable callback) {
         conditionalDelays.add(new ConditionalDelayData(equality, callback));
+    }
+
+    public void createConditionalDelay(BooleanSupplier equality, Runnable callback, long timeout, Runnable timeoutCallback) {
+        conditionalDelays.add(new ConditionalDelayData(equality, callback, timeout, timeoutCallback));
     }
 }

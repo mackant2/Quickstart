@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
+import opmodes.SpecimenAuto;
 import utils.DelaySystem;
 import utils.PressEventSystem;
 import utils.Robot;
@@ -17,20 +18,21 @@ public class Arm {
         Transferring
     }
     public static class FourBarPosition {
+        public static final double STRAIGHT_FORWARD = 0.83;
         public static final double STRAIGHT_BACK = 0.21;
         public static final double STRAIGHT_UP = 0.50;
-        public static final double SAMPLE_DEPOSIT = 0.68;
+        public static final double SAMPLE_DEPOSIT = 0.63;
     }
     public static class WristPosition {
         public static final double TRANSFER = .86;
         public static final double STRAIGHT = 0.5;
         public static final double SPECIMEN_DEPOSIT = 0.15;
-        public static final double SAMPLE_DEPOSIT = 0.3;
+        public static final double SAMPLE_DEPOSIT = 0.37;
     }
     public static class Height {
-        public static final int UPPER_BUCKET = 3400;
+        public static final int UPPER_BUCKET = 3200;
         public static final int DOWN = 0;
-        public static final int TRANSFER = 100;
+        public static final int TRANSFER = 50;
         public static final int PRE_TRANSFER = 200;
         public static int WALL_PICKUP = 157;
         public static final int PRE_SPECIMEN_DEPOSIT = 920;
@@ -50,41 +52,40 @@ public class Arm {
     final int LIFT_MAX_DIFF = 400;
     Robot robot;
     public DelaySystem delaySystem;
+    public int liftHeight = 0;
+    int liftTarget = 0;
+    double wristPosition = 0;
 
-    public void RotateFourBar(double position) {
+    public void rotateFourBar(double position) {
         leftFourBar.setPosition(1 - position);
         rightFourBar.setPosition(position);
     }
 
-    public void RotateWrist(double degrees) {
-        wrist.setPosition(degrees);
-        //wrist.setPosition(degrees / 180f + 0.5f);
+    public void rotateWrist(double position) {
+        wristPosition = position;
+        wrist.setPosition(wristPosition);
     }
 
-    double GetWristDegrees() {
-        return wrist.getPosition() / 180 + 0.5;
-    }
-
-    public void DepositSample() {
-        RotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
-        RotateWrist(WristPosition.SAMPLE_DEPOSIT);
-        delaySystem.CreateDelay(500, () -> {
-            robot.arm.SetClawPosition(Arm.ClawPosition.Open);
+    public void depositSample() {
+        rotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
+        rotateWrist(WristPosition.SAMPLE_DEPOSIT);
+        delaySystem.createDelay(200, () -> {
+            setClawPosition(ClawPosition.Open);
         });
     }
 
-    public void DepositSample(Runnable callback) {
-        RotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
-        RotateWrist(WristPosition.SAMPLE_DEPOSIT);
-        delaySystem.CreateDelay(500, () -> {
-            robot.arm.SetClawPosition(Arm.ClawPosition.Open);
-            delaySystem.CreateDelay(500, callback::run);
+    public void depositSample(Runnable callback) {
+        rotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
+        rotateWrist(WristPosition.SAMPLE_DEPOSIT);
+        delaySystem.createDelay(200, () -> {
+            setClawPosition(ClawPosition.Open);
+            delaySystem.createDelay(200, callback);
         });
     }
 
-    public void UpdateWallPickupHeight() {
-        robot.logger.log("WALL PICKUP HEIGHT: " + liftLeft.getTargetPosition());
-        Height.WALL_PICKUP = liftLeft.getTargetPosition();
+    public void updateWallPickupHeight() {
+        Height.WALL_PICKUP = liftHeight;
+        robot.logger.log("WALL PICKUP HEIGHT: " + liftTarget);
     }
 
     public Arm(Robot robot) {
@@ -104,45 +105,46 @@ public class Arm {
         claw = robot.parsedHardwareMap.claw;
     }
 
-    public void RegisterControls() {
+    public void registerControls() {
         PressEventSystem pressEventSystem = robot.pressEventSystem;
 
-        pressEventSystem.AddListener(assistantController, "left_bumper", robot.arm::UpdateWallPickupHeight);
-        pressEventSystem.AddListener(assistantController, "right_bumper", robot.arm::ToggleClaw);
-        pressEventSystem.AddListener(assistantController, "y", () -> robot.arm.RunPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT));
-        pressEventSystem.AddListener(assistantController, "a", () -> robot.arm.RunPreset(Presets.SPECIMEN_GRAB));
-        pressEventSystem.AddListener(assistantController, "x", () -> robot.arm.RunPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT));
-        pressEventSystem.AddListener(assistantController, "dpad_down", () -> robot.arm.RunPreset(Arm.Presets.PRE_TRANSFER));
-        pressEventSystem.AddListener(assistantController, "dpad_left", robot.arm::Transfer);
-        pressEventSystem.AddListener(assistantController, "dpad_up", robot.arm::DepositSample);
+        pressEventSystem.addListener(assistantController, "left_bumper", this::updateWallPickupHeight);
+        pressEventSystem.addListener(assistantController, "right_bumper", this::toggleClaw);
+        pressEventSystem.addListener(assistantController, "y", () -> runPreset(Presets.PRE_SAMPLE_DEPOSIT));
+        pressEventSystem.addListener(assistantController, "a", () -> runPreset(Presets.SPECIMEN_GRAB));
+        pressEventSystem.addListener(assistantController, "x", () -> runPreset(Presets.PRE_SPECIMEN_DEPOSIT));
+        pressEventSystem.addListener(assistantController, "dpad_down", () -> runPreset(Presets.PRE_TRANSFER));
+        pressEventSystem.addListener(assistantController, "dpad_left", this::transfer);
+        pressEventSystem.addListener(assistantController, "dpad_up", this::depositSample);
     }
 
-    public void Initialize() {
-        RunPreset(Presets.RESET);
-    }
-
-    public void ToggleClaw() {
+    public void toggleClaw() {
         claw.setPosition(claw.getPosition() == ClawPosition.Open ? ClawPosition.Closed : ClawPosition.Open);
     }
 
-    public void SetClawPosition(double newPosition) {
+    public void setClawPosition(double newPosition) {
         claw.setPosition(newPosition);
     }
 
-    public void GoToHeight(int height) {
-        liftLeft.setTargetPosition(height);
-        liftRight.setTargetPosition(height);
+    public void goToHeight(int height) {
+        if (liftTarget == height) return;
+
+        liftTarget = height;
+        liftLeft.setTargetPosition(liftTarget);
+        liftRight.setTargetPosition(liftTarget);
     }
 
-    public void AdjustLiftHeight(int change) {
-        GoToHeight(liftLeft.getCurrentPosition() + change);
+    public void adjustLiftHeight(int change) {
+        goToHeight(liftHeight + change);
     }
 
     float clamp(float num, float min, float max) {
         return Math.max(min, Math.min(num, max));
     }
 
-    public void Update() {
+    public void update() {
+        double wristPosition = wrist.getPosition();
+
         double power = -assistantController.left_stick_y;
         if (power != 0) {
             if (state != State.DriverControlled) {
@@ -151,7 +153,7 @@ public class Arm {
             if (assistantController.left_bumper) {
                 power *= 0.2;
             }
-            GoToHeight((int)clamp((float)(liftLeft.getCurrentPosition() + 1 + Math.floor(power * LIFT_MAX_DIFF)), 0, MAX_HEIGHT));
+            goToHeight((int)clamp((float)(liftHeight + 1 + Math.floor(power * LIFT_MAX_DIFF)), 0, MAX_HEIGHT));
         }
 
         double fourBarPosition = rightFourBar.getPosition();
@@ -168,35 +170,47 @@ public class Arm {
             if (state != State.DriverControlled) {
                 state = State.DriverControlled;
             }
-            RotateFourBar(clamped);
+            rotateFourBar(clamped);
         }
 
-        wrist.setPosition(clamp((float)(wrist.getPosition() + (assistantController.left_trigger - assistantController.right_trigger) * 0.02), 0, 1));
+        wrist.setPosition(clamp((float)(wristPosition + (assistantController.left_trigger - assistantController.right_trigger) * 0.02), 0, 1));
         telemetry.addData("Arm State", state);
-        robot.opMode.telemetry.addData("Arm Voltage (MILLIAMPS)", liftLeft.getCurrent(CurrentUnit.MILLIAMPS));
-        telemetry.addData("Lift Position", liftLeft.getCurrentPosition());
-        telemetry.addData("Lift Target", liftLeft.getTargetPosition());
-        telemetry.addData("Four Bar Position", leftFourBar.getPosition());
-        telemetry.addData("Wrist Position", wrist.getPosition());
 
-        robot.logger.log("Lift Position: " + GetLiftHeight() + ", Lift Velocity: " + liftLeft.getVelocity() + ", Lift Voltage (MILLIAMPS): " + liftLeft.getCurrent(CurrentUnit.MILLIAMPS));
+        double liftCurrent = liftLeft.getCurrent(CurrentUnit.MILLIAMPS);
+
+        robot.opMode.telemetry.addData("Arm Voltage (MILLIAMPS)", liftCurrent);
+        telemetry.addData("Lift Height", liftHeight);
+        telemetry.addData("Lift Target", liftTarget);
+        telemetry.addData("Four Bar Position", 1 - leftFourBar.getPosition());
+        telemetry.addData("Wrist Position", wristPosition);
+
+        robot.logger.log("Lift Position: " + liftHeight + ", Lift Velocity: " + liftLeft.getVelocity() + ", Lift Voltage (MILLIAMPS): " + liftCurrent);
     }
 
-    public int GetLiftHeight() {
-        return liftLeft.getCurrentPosition();
+    public void internalUpdate() {
+        liftHeight = liftLeft.getCurrentPosition();
+        liftTarget = liftLeft.getTargetPosition();
+
+        double power = liftRight.getPower();
+        if (liftTarget - liftHeight < 100 && power != 0) {
+            liftRight.setPower(0);
+        }
+        else if (power != 1) {
+            liftRight.setPower(1);
+        }
     }
 
-    public void Transfer() {
+    public void transfer() {
         if (state != State.Transferring) {
             state = State.Transferring;
-            RunPreset(Arm.Presets.PRE_TRANSFER);
-            robot.intake.ExtendTo(Intake.ExtenderPosition.IN);
-            delaySystem.CreateConditionalDelay(
+            runPreset(Presets.PRE_TRANSFER);
+            robot.intake.extendTo(Intake.ExtenderPosition.IN);
+            delaySystem.createConditionalDelay(
                     robot.intake::isExtenderIn,
                     () -> {
-                        RunPreset(Arm.Presets.TRANSFER);
-                        delaySystem.CreateDelay(500, () -> {
-                            SetClawPosition(Arm.ClawPosition.Closed);
+                        runPreset(Arm.Presets.TRANSFER);
+                        delaySystem.createDelay(200, () -> {
+                            setClawPosition(ClawPosition.Closed);
                             state = State.DriverControlled;
                         });
                     }
@@ -204,32 +218,47 @@ public class Arm {
         }
     }
     
-    public void Transfer(Runnable callback) {
+    public void transfer(Runnable callback) {
         if (state != State.Transferring) {
             state = State.Transferring;
-            RunPreset(Presets.PRE_TRANSFER);
-            robot.intake.ExtendTo(Intake.ExtenderPosition.IN);
-            delaySystem.CreateConditionalDelay(
+            runPreset(Presets.PRE_TRANSFER);
+            robot.intake.extendTo(Intake.ExtenderPosition.IN);
+            delaySystem.createConditionalDelay(
                     robot.intake::isExtenderIn,
                     () -> {
-                        RunPreset(Arm.Presets.TRANSFER);
-                        delaySystem.CreateConditionalDelay(
-                            () -> GetLiftHeight() <= Height.TRANSFER,
+                        runPreset(Presets.TRANSFER);
+                        delaySystem.createConditionalDelay(
+                            () -> liftHeight <= Height.TRANSFER + 20,
                             () -> {
-                                SetClawPosition(Arm.ClawPosition.Closed);
+                                setClawPosition(ClawPosition.Closed);
                                 state = State.DriverControlled;
-                                delaySystem.CreateDelay(250, callback::run);
+                                delaySystem.createDelay(250, callback);
                         });
                     }
             );
         }
     }
 
-    public void RunPreset(Preset preset) {
-        GoToHeight(preset.liftPosition);
-        RotateFourBar(preset.fourBarPosition);
-        RotateWrist(preset.wristPosition);
-        SetClawPosition(preset.clawPosition);
+    public void dropSample(Runnable callback) {
+        goToHeight(Height.PRE_TRANSFER);
+        delaySystem.createConditionalDelay(
+                () -> liftHeight >= Height.PRE_TRANSFER - 10,
+                () -> {
+                    rotateFourBar(FourBarPosition.STRAIGHT_FORWARD);
+                    rotateWrist(WristPosition.STRAIGHT);
+                    delaySystem.createDelay(750, () -> {
+                        setClawPosition(ClawPosition.Open);
+                        delaySystem.createDelay(200, callback);
+                    });
+                }
+        );
+    }
+
+    public void runPreset(Preset preset) {
+        goToHeight(preset.liftPosition);
+        rotateFourBar(preset.fourBarPosition);
+        rotateWrist(preset.wristPosition);
+        setClawPosition(preset.clawPosition);
     }
 
     public static class Presets {

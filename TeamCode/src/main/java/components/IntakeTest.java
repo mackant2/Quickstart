@@ -54,7 +54,7 @@ public class IntakeTest {
         return Math.max(min, Math.min(num, max));
     }
 
-    public void Update() {
+    public void update() {
         switch (teststate) {
             case Intaking:
                 intaketest.setPower(-1);
@@ -81,7 +81,7 @@ public class IntakeTest {
 
 
 
-        delaySystem.Update();
+        delaySystem.update();
 
         robotTest.opMode.telemetry.addData("Intake State", teststate);
     }

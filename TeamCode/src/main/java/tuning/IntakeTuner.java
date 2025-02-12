@@ -49,9 +49,8 @@ public class IntakeTuner extends OpMode {
                 }
                 break;
             case Tuning:
-                extender.setTargetPosition(extender.getCurrentPosition() - 25);
+                extender.setTargetPosition(extender.getCurrentPosition() - 15);
                 if (limiter.isPressed()) {
-                    extender.setTargetPosition(extender.getCurrentPosition() + 20);
                     state = TunerState.ResettingEncoder;
                 }
                 break;

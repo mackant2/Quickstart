@@ -4,7 +4,6 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.localization.Pose;
 import com.pedropathing.pathgen.BezierLine;
 import com.pedropathing.pathgen.PathChain;
-import com.pedropathing.pathgen.Point;
 import com.pedropathing.util.Constants;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -38,7 +37,7 @@ public class SampleAuto extends OpMode {
     private final double robotLength = 15.75;
 
     private final Pose startPose = new Pose(7.875, 113.85, Math.toRadians(90));
-    final Pose scorePose = new Pose(14,128, Math.toRadians(135));
+    final Pose scorePose = new Pose(14,130, Math.toRadians(135));
 
     private Follower follower;
 
@@ -46,20 +45,19 @@ public class SampleAuto extends OpMode {
 
     boolean didStateAction = false;
 
-    int goalSamples = 3;
+    int goalSamples = 4;
     int samplesScored = 0;
     int rawStateIndex = 0;
 
-    double intakeX = 16.5;
+    double intakeX = 27;
 
     List<Pose> samplePoses = Arrays.asList(
-            new Pose(intakeX, 120.5, Math.toRadians(180)),
-            new Pose(intakeX, 128.5, Math.toRadians(176)),
-            new Pose(intakeX, 136.5, Math.toRadians(176))
+            new Pose(intakeX, 122.5, Math.toRadians(180)),
+            new Pose(intakeX, 131.5, Math.toRadians(180)),
+            new Pose(intakeX + 6, 130, Math.toRadians(223))
     );
 
     List<PathChain> samplePaths = new ArrayList<>();
-    List<PathChain> sampleIntakePaths = new ArrayList<>();
     List<PathChain> sampleDepositPaths = new ArrayList<>();
 
     @Override
@@ -68,7 +66,7 @@ public class SampleAuto extends OpMode {
 
         delaySystem = robot.delaySystem;
 
-        robot.arm.SetClawPosition(Arm.ClawPosition.Closed);
+        robot.arm.setClawPosition(Arm.ClawPosition.Closed);
 
         Constants.setConstants(FConstants.class, LConstants.class);
         follower = new Follower(hardwareMap);
@@ -79,11 +77,11 @@ public class SampleAuto extends OpMode {
         sampleDepositPaths.add(follower.pathBuilder()
                 .addPath(
                         new BezierLine(
-                                new Point(startPose),
-                                new Point(scorePose)
+                                startPose,
+                                scorePose
                         )
                 )
-                .setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading())
+                .setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading(), 0.95)
                 .build());
 
         for (int i = 0; i < goalSamples - 1; i++) {
@@ -92,36 +90,27 @@ public class SampleAuto extends OpMode {
             samplePaths.add(follower.pathBuilder()
                     .addPath(
                             new BezierLine(
-                                    new Point(scorePose),
-                                    new Point(samplePose)
+                                    scorePose,
+                                    samplePose
                             )
                     )
-                    .setLinearHeadingInterpolation(scorePose.getHeading(), samplePose.getHeading())
-                    .build());
-            sampleIntakePaths.add(follower.pathBuilder()
-                    .addPath(
-                            new BezierLine(
-                                    new Point(samplePose),
-                                    new Point(sampleIntakePose)
-                            )
-                    )
-                    .setLinearHeadingInterpolation(samplePose.getHeading(), sampleIntakePose.getHeading())
+                    .setLinearHeadingInterpolation(scorePose.getHeading(), samplePose.getHeading(), 0.95)
                     .build());
             sampleDepositPaths.add(follower.pathBuilder()
                     .addPath(
                             new BezierLine(
-                                    new Point(sampleIntakePose),
-                                    new Point(scorePose)
+                                    sampleIntakePose,
+                                    scorePose
                             )
                     )
-                    .setLinearHeadingInterpolation(sampleIntakePose.getHeading(), scorePose.getHeading())
+                    .setLinearHeadingInterpolation(sampleIntakePose.getHeading(), scorePose.getHeading(), 0.95)
                     .build());
         }
     }
     @Override
     public void init_loop() {
         follower.update();
-        robot.Update();
+        robot.update();
     }
 
 
@@ -141,8 +130,7 @@ public class SampleAuto extends OpMode {
             case MovingToBucket:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.RotateWrist(Arm.WristPosition.STRAIGHT);
-                    robot.arm.GoToHeight(Arm.Height.UPPER_BUCKET);
+                    robot.arm.runPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT);
                     follower.followPath(sampleDepositPaths.get(samplesScored));
                 }
                 else if (!follower.isBusy()) {
@@ -152,9 +140,9 @@ public class SampleAuto extends OpMode {
             case ScoringSample:
                 if (!didStateAction) {
                     didStateAction = true;
-                    delaySystem.CreateConditionalDelay(
-                        () -> robot.arm.GetLiftHeight() >= Arm.Height.UPPER_BUCKET,
-                        () -> robot.arm.DepositSample(() -> {
+                    delaySystem.createConditionalDelay(
+                        () -> robot.arm.liftHeight >= Arm.Height.UPPER_BUCKET - 20,
+                        () -> robot.arm.depositSample(() -> {
                                 samplesScored++;
                                 if (samplesScored < goalSamples) {
                                     TransferToState(SampleAutoState.MovingToSample);
@@ -169,17 +157,14 @@ public class SampleAuto extends OpMode {
             case MovingToSample:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.RunPreset(Arm.Presets.PRE_TRANSFER);
-                    delaySystem.CreateConditionalDelay(
-                            () -> robot.arm.GetLiftHeight() <= Arm.Height.PRE_TRANSFER,
+                    robot.arm.runPreset(Arm.Presets.RESET);
+                    delaySystem.createConditionalDelay(
+                            () -> robot.arm.liftHeight <= Arm.Height.PRE_TRANSFER,
                             () -> {
                                 follower.followPath(samplePaths.get(samplesScored - 1), true);
-                                delaySystem.CreateConditionalDelay(
+                                delaySystem.createConditionalDelay(
                                         () -> !follower.isBusy(),
-                                        () -> {
-                                            robot.intake.RunIntake(Intake.IntakeDirection.Rejecting);
-                                            TransferToState(SampleAutoState.IntakingSample);
-                                        }
+                                        () -> TransferToState(SampleAutoState.IntakingSample)
                                 );
                             }
                     );
@@ -188,35 +173,28 @@ public class SampleAuto extends OpMode {
             case IntakingSample:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.intake.SetFlipdownPosition(Intake.FlipdownPosition.DOWN);
-                    follower.followPath(sampleIntakePaths.get(samplesScored - 1));
-                    delaySystem.CreateConditionalDelay(
-                            () -> follower.getPose().getX() > intakeX - 10,
-                            () -> {
-                                robot.intake.RunIntake(Intake.IntakeDirection.Intaking);
-                                robot.intake.ExtendTo(Intake.ExtenderPosition.IN + 100);
-                                robot.intake.SetFlipdownPosition(Intake.FlipdownPosition.DOWN);
-                                delaySystem.CreateConditionalDelay(
-                                        robot.parsedHardwareMap.intakeLimiter::isPressed,
-                                        () -> {
-                                            robot.intake.StopIntake();
-                                            robot.arm.Transfer(() -> TransferToState(SampleAutoState.MovingToBucket));
-                                        }
+                    robot.intake.runMarchingIntake(
+                        samplesScored < 3 ? Intake.ExtenderPosition.OUT / 2 - 250 : Intake.ExtenderPosition.OUT / 2 - 450,
+                        () -> robot.arm.transfer(() -> TransferToState(SampleAutoState.MovingToBucket)),
+                        () -> {
+                            if (samplesScored == goalSamples - 1) {
+                                TransferToState(SampleAutoState.Parking);
+                            }
+                            else {
+                                samplesScored++;
+                                robot.intake.RunIntake(Intake.IntakeDirection.Rejecting);
+                                robot.intake.extendTo(Intake.ExtenderPosition.IN + 250);
+                                delaySystem.createConditionalDelay(
+                                        () -> robot.intake.extenderPosition <= Intake.ExtenderPosition.IN + 250,
+                                        () -> TransferToState(SampleAutoState.MovingToSample)
                                 );
                             }
-                    );
-                    delaySystem.CreateDelay(
-                            3000,
-                            () -> {
-                                if (robot.intake.getIntakeDirection() == Intake.IntakeDirection.Intaking) {
-                                    TransferToState(SampleAutoState.Parking);
-                                }
-                            }
+                        }
                     );
                 }
                 break;
             case Parking:
-                requestOpModeStop();
+                robot.arm.runPreset(Arm.Presets.RESET);
                 break;
         }
 
@@ -227,7 +205,7 @@ public class SampleAuto extends OpMode {
         robot.logger.log("X: " + follower.getPose().getX() + ", Y: " + follower.getPose().getY() + ", Heading: " + follower.getPose().getHeading());
 
         follower.update();
-        robot.Update();
+        robot.update();
     }
 
     @Override

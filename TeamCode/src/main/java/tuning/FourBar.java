@@ -31,28 +31,28 @@ public class FourBar extends LinearOpMode {
         claw.setPosition(0.8);
         parsedHardwareMap.liftLeft.setTargetPosition(0);
 
-        pressEventSystem.AddListener(gamepad1, "a", () -> claw.setPosition(claw.getPosition() == 0.8 ? 0.3 : 0.8));
-        pressEventSystem.AddListener(gamepad1, "dpad_up", () -> {
+        pressEventSystem.addListener(gamepad1, "a", () -> claw.setPosition(claw.getPosition() == 0.8 ? 0.3 : 0.8));
+        pressEventSystem.addListener(gamepad1, "dpad_up", () -> {
             double newPos = rightFourBar.getPosition() + 0.01;
             leftFourBar.setPosition(newPos);
             rightFourBar.setPosition(newPos);
         });
-        pressEventSystem.AddListener(gamepad1, "dpad_down", () -> {
+        pressEventSystem.addListener(gamepad1, "dpad_down", () -> {
            double newPos = rightFourBar.getPosition() - 0.01;
            leftFourBar.setPosition(newPos);
            rightFourBar.setPosition(newPos);
         });
-        pressEventSystem.AddListener(gamepad1, "dpad_left", () -> {
+        pressEventSystem.addListener(gamepad1, "dpad_left", () -> {
             double newPos = clamp((float)(wrist.getPosition() + 0.01), 0, 1);
             wrist.setPosition(newPos);
         });
-        pressEventSystem.AddListener(gamepad1, "dpad_right", () -> {
+        pressEventSystem.addListener(gamepad1, "dpad_right", () -> {
             double newPos = clamp((float)(wrist.getPosition() - 0.01), 0, 1);
             wrist.setPosition(newPos);
         });
 
         while (!isStopRequested()) {
-            pressEventSystem.Update();
+            pressEventSystem.update();
 
             double newPos = clamp((float)(rightFourBar.getPosition() + (gamepad1.left_trigger - gamepad1.right_trigger) / 100), 0, 1);
             leftFourBar.setPosition(newPos);

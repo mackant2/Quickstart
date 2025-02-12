@@ -18,9 +18,9 @@ public class PressEventSystem {
     class Listener {
         public final Gamepad controller;
         public final Field button;
-        public final PressCallback callback;
+        public final Runnable callback;
         public boolean isPressed;
-        public Listener(Gamepad controller, String button, PressCallback callback) {
+        public Listener(Gamepad controller, String button, Runnable callback) {
             this.controller = controller;
             this.button = buttons.get(button);
             this.callback = callback;
@@ -37,11 +37,7 @@ public class PressEventSystem {
         }
     }
 
-    public interface PressCallback {
-        void fire();
-    }
-
-    public void Update() {
+    public void update() {
         //Loop through listeners
         for (Listener listener : listeners) {
             try {
@@ -49,7 +45,7 @@ public class PressEventSystem {
                 if (pressed != listener.isPressed) {
                     listener.isPressed = pressed;
                     if (pressed) {
-                        listener.callback.fire();
+                        listener.callback.run();
                     }
                 }
             }
@@ -60,7 +56,7 @@ public class PressEventSystem {
         }
     }
 
-    public void AddListener(Gamepad controller, String button, PressCallback callback) {
+    public void addListener(Gamepad controller, String button, Runnable callback) {
         listeners.add(new Listener(controller, button, callback));
     }
 }

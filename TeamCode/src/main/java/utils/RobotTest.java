@@ -33,7 +33,7 @@ public class RobotTest {
         }
     }
 
-    public void Update() {
-        intaketest.Update();
+    public void update() {
+        intaketest.update();
     }
 }

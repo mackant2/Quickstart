@@ -61,7 +61,7 @@ public class Drivetrain {
   }
 
 
-  public void Update() {
+  public void update() {
     angles = imu.getRobotOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
     double  theta = angles.firstAngle - degree_Zero;
     if (theta > 180) {

@@ -8,7 +8,6 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
-import components.Arm;
 import components.Intake;
 import utils.ParsedHardwareMap;
 import utils.PressEventSystem;
@@ -40,20 +39,22 @@ public class ITDTeleOp extends OpMode {
 
     @Override
     public void start() {
-        robot.arm.RegisterControls();
+        robot.arm.registerControls();
         //drivetrain & intake - gamepad1
-        pressEventSystem.AddListener(driverController, "y", robot.intake::ToggleFlipdown);
-        pressEventSystem.AddListener(driverController, "a", robot.drivetrain::resetOrientation);
-        pressEventSystem.AddListener(driverController, "dpad_down", robot.arm::Transfer);
-        pressEventSystem.AddListener(driverController, "dpad_up", robot.drivetrain::ToggleHalfSpeed);
+        pressEventSystem.addListener(driverController, "y", robot.intake::toggleFlipdown);
+        pressEventSystem.addListener(driverController, "a", robot.drivetrain::resetOrientation);
+        pressEventSystem.addListener(driverController, "dpad_down", robot.arm::transfer);
+        pressEventSystem.addListener(driverController, "dpad_up", robot.drivetrain::ToggleHalfSpeed);
 
         robot.parsedHardwareMap.flipDown.setPosition(0);
-        robot.parsedHardwareMap.extender.setTargetPosition(Intake.ExtenderPosition.IN);
+        robot.intake.extendTo(Intake.ExtenderPosition.IN);
     }
 
     @Override
     public void loop() {
-        robot.Update();
+        long startTime = System.nanoTime();
+        robot.update();
+        telemetry.addData("Loop Time (ms)", System.nanoTime() / startTime / 1_000_000);
     }
 
     @Override

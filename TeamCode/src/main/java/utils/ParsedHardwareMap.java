@@ -1,6 +1,7 @@
 package utils;
 
 import com.acmerobotics.roadrunner.ftc.SparkFunOTOSCorrected;
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -76,7 +77,7 @@ public class ParsedHardwareMap {
         liftLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         liftRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         liftLeft.setPower(1);
-        liftRight.setPower(0);
+        liftRight.setPower(1);
 
         //Configure Intake
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -87,5 +88,9 @@ public class ParsedHardwareMap {
         extender.setPower(1);
 
         imu = hardwareMap.get(IMU.class, "imu");
+
+        for (LynxModule hub : hardwareMap.getAll(LynxModule.class)) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
+        }
     }
 }

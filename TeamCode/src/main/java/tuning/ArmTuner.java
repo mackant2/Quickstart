@@ -65,7 +65,7 @@ public class ArmTuner extends OpMode {
         wrist = parsedHardwareMap.wrist;
         claw = parsedHardwareMap.claw;
 
-        robot.arm.RunPreset(Arm.Presets.RESET);
+        robot.arm.runPreset(Arm.Presets.RESET);
     }
 
     @Override
@@ -89,23 +89,23 @@ public class ArmTuner extends OpMode {
     @Override
     public void start() {
         if (state == State.Playground) {
-            robot.arm.RegisterControls();
+            robot.arm.registerControls();
         }
     }
 
     @Override
     public void loop() {
-        pressEventSystem.Update();
-        delaySystem.Update();
+        pressEventSystem.update();
+        delaySystem.update();
 
         switch (state) {
             case RunPresets:
                     if (!scheduledNextPreset) {
                         scheduledNextPreset = true;
 
-                        robot.arm.RunPreset(armPresets.get(presetIndex));
+                        robot.arm.runPreset(armPresets.get(presetIndex));
 
-                        delaySystem.CreateDelay(3000, () -> {
+                        delaySystem.createDelay(3000, () -> {
                             presetIndex++;
                             if (presetIndex == armPresets.size()) presetIndex = 0;
                             scheduledNextPreset = false;
@@ -117,7 +117,7 @@ public class ArmTuner extends OpMode {
                 telemetry.addLine("2) Press A/X when you are ready to begin the automated tuning process.");
                 double trigger = gamepad1.right_trigger;
                 if (trigger > 0) {
-                    robot.arm.AdjustLiftHeight((int)Math.round(trigger * 50));
+                    robot.arm.adjustLiftHeight((int)Math.round(trigger * 50));
                 }
                 telemetry.addData("Left Lift Position", liftLeft.getCurrentPosition());
                 telemetry.addData("Left Lift Target Position", liftLeft.getTargetPosition());
@@ -127,7 +127,7 @@ public class ArmTuner extends OpMode {
                 }
                 break;
             case Calibrating:
-                robot.arm.AdjustLiftHeight(-10);
+                robot.arm.adjustLiftHeight(-10);
                 if (liftLimiter.isPressed()) {
                     state = State.Resetting;
                 }

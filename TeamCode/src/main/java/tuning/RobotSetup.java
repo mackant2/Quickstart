@@ -55,18 +55,18 @@ public class RobotSetup extends OpMode {
         wrist = parsedHardwareMap.wrist;
         claw = parsedHardwareMap.claw;
 
-        robot.arm.RunPreset(Arm.Presets.RESET);
+        robot.arm.runPreset(Arm.Presets.RESET);
     }
 
     @Override
     public void start() {
-        pressEventSystem.AddListener(gamepad1, "a", () -> claw.setPosition(claw.getPosition() == Arm.ClawPosition.Open ? Arm.ClawPosition.Closed : Arm.ClawPosition.Open));
+        pressEventSystem.addListener(gamepad1, "a", () -> claw.setPosition(claw.getPosition() == Arm.ClawPosition.Open ? Arm.ClawPosition.Closed : Arm.ClawPosition.Open));
     }
 
     @Override
     public void loop() {
-        pressEventSystem.Update();
-        delaySystem.Update();
+        pressEventSystem.update();
+        delaySystem.update();
 
         switch (state) {
             case RaisingLift: {
@@ -81,7 +81,7 @@ public class RobotSetup extends OpMode {
                         triggerStarted = false;
                         state = State.ExtendingExtender;
                     } else {
-                        robot.arm.AdjustLiftHeight((int) Math.round(power * 50));
+                        robot.arm.adjustLiftHeight((int) Math.round(power * 50));
                     }
                 }
                 break;
@@ -99,17 +99,17 @@ public class RobotSetup extends OpMode {
                             state = State.Calibrating;
                         }
                         else {
-                            robot.intake.AdjustExtenderPosition(Math.round(gamepad1.right_trigger * 50));
+                            robot.intake.adjustExtenderPosition(Math.round(gamepad1.right_trigger * 50));
                         }
                     }
                 break;
             case Calibrating:
                 telemetry.addLine("Calibrating...");
                 if (!liftLimiter.isPressed()) {
-                    robot.arm.AdjustLiftHeight(-10);
+                    robot.arm.adjustLiftHeight(-10);
                 }
                 if (!extenderLimiter.isPressed()) {
-                    robot.intake.AdjustExtenderPosition(-25);
+                    robot.intake.adjustExtenderPosition(-25);
                 }
                 if (liftLimiter.isPressed() && extenderLimiter.isPressed()) {
                     state = State.Resetting;
@@ -119,7 +119,7 @@ public class RobotSetup extends OpMode {
                 telemetry.addLine("Resetting encoder...");
                 if (liftLeft.getMode() != DcMotor.RunMode.STOP_AND_RESET_ENCODER) {
                     liftLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    liftRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    robot.parsedHardwareMap.extender.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                 }
                 if (liftLeft.getCurrentPosition() == 0) {
                     requestOpModeStop();

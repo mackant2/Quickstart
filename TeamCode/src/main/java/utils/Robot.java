@@ -23,9 +23,9 @@ public class Robot {
 
     void InitializeAll() {
         //initialize four bar
-        arm.Initialize();
+        arm.runPreset(Arm.Presets.RESET);
         //flip intake up and bring in
-        intake.Initialize();
+        intake.reset();
     }
 
     public Robot(OpMode opMode, HardwareMap hardwareMap, boolean isTeleop) {
@@ -44,20 +44,17 @@ public class Robot {
         }
     }
 
-    public void Update() {
+    public void update() {
+        arm.internalUpdate();
+        intake.internalUpdate();
+
         if (isTeleop) {
-            arm.Update();
-            drivetrain.Update();
-            intake.Update();
+            arm.update();
+            drivetrain.update();
+            intake.update();
         }
 
-        telemetry.addData("Extender Position", parsedHardwareMap.extender.getCurrentPosition());
-        telemetry.addData("Extender Target", parsedHardwareMap.extender.getTargetPosition());
-        telemetry.addData("Lift Position", parsedHardwareMap.liftLeft.getCurrentPosition());
-        telemetry.addData("Lift Target", parsedHardwareMap.liftLeft.getTargetPosition());
-        telemetry.addData("Four Bar Position", 1 - parsedHardwareMap.leftFourBar.getPosition());
-
-        delaySystem.Update();
-        pressEventSystem.Update();
+        delaySystem.update();
+        pressEventSystem.update();
     }
 }
