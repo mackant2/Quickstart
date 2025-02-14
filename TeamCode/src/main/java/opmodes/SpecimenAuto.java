@@ -21,7 +21,7 @@ import pedroPathing.constants.LConstants;
 import utils.DelaySystem;
 import utils.Robot;
 
-@Autonomous(name = "Specimen Auto", group = "Opmodes")
+@Autonomous(name = "[OFFICIAL] Specimen Auto", group = "Opmodes")
 public class SpecimenAuto extends OpMode {
     enum AutoState {
         Idle,
@@ -229,7 +229,7 @@ public class SpecimenAuto extends OpMode {
                     didStateAction = true;
                     robot.arm.runPreset(Arm.Presets.SPECIMEN_DEPOSIT);
                     delaySystem.createDelay(1250, () -> {
-                        robot.arm.setClawPosition(Arm.ClawPosition.Open);
+                        robot.arm.setClawPosition(Arm.ClawPosition.OPEN);
                         specimensScored++;
                         delaySystem.createDelay(200, () -> {
                             robot.arm.runPreset(Arm.Presets.RESET);
@@ -322,7 +322,7 @@ public class SpecimenAuto extends OpMode {
             case GrabbingSpecimen:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.setClawPosition(Arm.ClawPosition.Closed);
+                    robot.arm.setClawPosition(Arm.ClawPosition.CLOSED);
                     delaySystem.createDelay(200, () -> TransferToState(AutoState.MovingToSub));
                 }
                 break;

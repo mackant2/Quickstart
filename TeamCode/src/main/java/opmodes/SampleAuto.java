@@ -8,6 +8,8 @@ import com.pedropathing.util.Constants;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -17,9 +19,10 @@ import components.Intake;
 import pedroPathing.constants.FConstants;
 import pedroPathing.constants.LConstants;
 import utils.DelaySystem;
+import utils.Logger;
 import utils.Robot;
 
-@Autonomous(name = "Bucket Auto", group = "Opmodes")
+@Autonomous(name = "[OFFICIAL] Bucket Auto", group = "Opmodes")
 public class SampleAuto extends OpMode {
     enum SampleAutoState {
         Idle,
@@ -32,6 +35,10 @@ public class SampleAuto extends OpMode {
     private SampleAutoState state = SampleAutoState.Idle;
 
     Robot robot;
+    Arm arm;
+    Intake intake;
+    Logger logger;
+    Telemetry telemetry;
 
     private final double robotWidth = 12.3;
     private final double robotLength = 15.75;
@@ -49,12 +56,12 @@ public class SampleAuto extends OpMode {
     int samplesScored = 0;
     int rawStateIndex = 0;
 
-    double intakeX = 27;
+    double intakeX = 33;
 
     List<Pose> samplePoses = Arrays.asList(
             new Pose(intakeX, 122.5, Math.toRadians(180)),
             new Pose(intakeX, 131.5, Math.toRadians(180)),
-            new Pose(intakeX + 6, 130, Math.toRadians(223))
+            new Pose(intakeX + 1, 130, Math.toRadians(220))
     );
 
     List<PathChain> samplePaths = new ArrayList<>();
@@ -63,15 +70,18 @@ public class SampleAuto extends OpMode {
     @Override
     public void init(){
         robot = new Robot(this, hardwareMap, false);
+        arm = robot.arm;
+        intake = robot.intake;
+        logger = robot.logger;
+        telemetry = robot.opMode.telemetry;
 
         delaySystem = robot.delaySystem;
 
-        robot.arm.setClawPosition(Arm.ClawPosition.Closed);
-
         Constants.setConstants(FConstants.class, LConstants.class);
-        follower = new Follower(hardwareMap);
 
+        follower = new Follower(hardwareMap);
         follower.setStartingPose(startPose);
+        follower.setMaxPower(0.8);
 
         //add custom init path
         sampleDepositPaths.add(follower.pathBuilder()
@@ -82,6 +92,7 @@ public class SampleAuto extends OpMode {
                         )
                 )
                 .setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading(), 0.95)
+                .setZeroPowerAccelerationMultiplier(2)
                 .build());
 
         for (int i = 0; i < goalSamples - 1; i++) {
@@ -95,6 +106,7 @@ public class SampleAuto extends OpMode {
                             )
                     )
                     .setLinearHeadingInterpolation(scorePose.getHeading(), samplePose.getHeading(), 0.95)
+                    .setZeroPowerAccelerationMultiplier(2)
                     .build());
             sampleDepositPaths.add(follower.pathBuilder()
                     .addPath(
@@ -104,6 +116,7 @@ public class SampleAuto extends OpMode {
                             )
                     )
                     .setLinearHeadingInterpolation(sampleIntakePose.getHeading(), scorePose.getHeading(), 0.95)
+                    .setZeroPowerAccelerationMultiplier(2)
                     .build());
         }
     }
@@ -130,7 +143,7 @@ public class SampleAuto extends OpMode {
             case MovingToBucket:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.runPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT);
+                    arm.runPreset(Arm.Presets.PRE_SAMPLE_DEPOSIT);
                     follower.followPath(sampleDepositPaths.get(samplesScored));
                 }
                 else if (!follower.isBusy()) {
@@ -141,8 +154,8 @@ public class SampleAuto extends OpMode {
                 if (!didStateAction) {
                     didStateAction = true;
                     delaySystem.createConditionalDelay(
-                        () -> robot.arm.liftHeight >= Arm.Height.UPPER_BUCKET - 20,
-                        () -> robot.arm.depositSample(() -> {
+                        () -> arm.liftHeight >= Arm.Height.UPPER_BUCKET - 50,
+                        () -> arm.depositSample(() -> {
                                 samplesScored++;
                                 if (samplesScored < goalSamples) {
                                     TransferToState(SampleAutoState.MovingToSample);
@@ -157,11 +170,11 @@ public class SampleAuto extends OpMode {
             case MovingToSample:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.runPreset(Arm.Presets.RESET);
+                    arm.runPreset(Arm.Presets.RESET);
                     delaySystem.createConditionalDelay(
-                            () -> robot.arm.liftHeight <= Arm.Height.PRE_TRANSFER,
+                            () -> arm.liftHeight <= Arm.Height.DOWN + 2000,
                             () -> {
-                                follower.followPath(samplePaths.get(samplesScored - 1), true);
+                                follower.followPath(samplePaths.get(samplesScored - 1));
                                 delaySystem.createConditionalDelay(
                                         () -> !follower.isBusy(),
                                         () -> TransferToState(SampleAutoState.IntakingSample)
@@ -173,19 +186,19 @@ public class SampleAuto extends OpMode {
             case IntakingSample:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.intake.runMarchingIntake(
-                        samplesScored < 3 ? Intake.ExtenderPosition.OUT / 2 - 250 : Intake.ExtenderPosition.OUT / 2 - 450,
-                        () -> robot.arm.transfer(() -> TransferToState(SampleAutoState.MovingToBucket)),
+                    intake.runMarchingIntake(
+                        samplesScored < 3 ? 200 : 550,
+                        () -> arm.transfer(() -> TransferToState(SampleAutoState.MovingToBucket)),
                         () -> {
                             if (samplesScored == goalSamples - 1) {
                                 TransferToState(SampleAutoState.Parking);
                             }
                             else {
                                 samplesScored++;
-                                robot.intake.RunIntake(Intake.IntakeDirection.Rejecting);
-                                robot.intake.extendTo(Intake.ExtenderPosition.IN + 250);
+                                intake.RunIntake(Intake.IntakeDirection.Rejecting);
+                                intake.extendTo(Intake.ExtenderPosition.IN + 250);
                                 delaySystem.createConditionalDelay(
-                                        () -> robot.intake.extenderPosition <= Intake.ExtenderPosition.IN + 250,
+                                        () -> intake.extenderPosition <= Intake.ExtenderPosition.IN + 250,
                                         () -> TransferToState(SampleAutoState.MovingToSample)
                                 );
                             }
@@ -194,15 +207,15 @@ public class SampleAuto extends OpMode {
                 }
                 break;
             case Parking:
-                robot.arm.runPreset(Arm.Presets.RESET);
+                arm.runPreset(Arm.Presets.RESET);
                 break;
         }
 
-        robot.opMode.telemetry.addData("State", state);
-        robot.opMode.telemetry.addData("Samples scored", samplesScored);
+        telemetry.addData("State", state);
+        telemetry.addData("Samples scored", samplesScored);
         telemetry.addData("Robot is moving", follower.isBusy());
 
-        robot.logger.log("X: " + follower.getPose().getX() + ", Y: " + follower.getPose().getY() + ", Heading: " + follower.getPose().getHeading());
+        logger.log("X: " + follower.getPose().getX() + ", Y: " + follower.getPose().getY() + ", Heading: " + follower.getPose().getHeading());
 
         follower.update();
         robot.update();
@@ -210,7 +223,7 @@ public class SampleAuto extends OpMode {
 
     @Override
     public void stop() {
-        robot.logger.close();
+        logger.close();
     }
 }
 

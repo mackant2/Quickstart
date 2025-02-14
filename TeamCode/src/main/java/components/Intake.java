@@ -1,5 +1,7 @@
 package components;
 
+import android.sax.StartElementListener;
+
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -8,17 +10,13 @@ import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.sfdev.assembly.state.StateMachine;
 import com.sfdev.assembly.state.StateMachineBuilder;
 
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-
 import utils.ParsedHardwareMap;
 import utils.Robot;
 
 public class Intake {
     public enum State {
         DriverControlled,
-        Intaking,
-        Rejecting,
-        Transferring
+        RunningMacro
     }
     public enum IntakeDirection {
         Intaking,
@@ -39,9 +37,10 @@ public class Intake {
     Robot robot;
     Gamepad driverController;
     StateMachine stateMachine;
-    TouchSensor intakeLimiter, extenderLimiter;
+    TouchSensor sampleSensor, extenderLimiter;
     boolean didStateAction = false;
     public int extenderPosition;
+    public boolean hasSample = false;
     int extenderTarget;
 
     public Intake(Robot robot) {
@@ -54,7 +53,7 @@ public class Intake {
         extender = parsedHardwareMap.extender;
         driverController = robot.opMode.gamepad1;
         extenderLimiter = parsedHardwareMap.extenderLimiter;
-        intakeLimiter = parsedHardwareMap.intakeLimiter;
+        sampleSensor = parsedHardwareMap.intakeLimiter;
 
         stateMachine = new StateMachineBuilder()
             .state(State.DriverControlled)
@@ -77,19 +76,32 @@ public class Intake {
         extender.setTargetPosition(extenderPosition);
     }
 
+    public void cancelMacro() {
+        state = State.DriverControlled;
+    }
+
+    boolean isInState(State checkState) {
+        return state == checkState;
+    }
+
     public void runMarchingIntake(int startPosition, Runnable callback, Runnable failedCallback) {
+        state = State.RunningMacro;
         extendTo(startPosition);
         robot.delaySystem.createConditionalDelay(
-                () -> extenderPosition >= startPosition - 10,
+                () -> extenderPosition >= startPosition - 10 || !isInState(State.RunningMacro),
                 () -> {
-                    robot.intake.setExtenderVelocity(200);
+                    if (!isInState(State.RunningMacro)) return;
+
+                    robot.intake.setExtenderVelocity(400);
                     robot.intake.extendTo(ExtenderPosition.OUT);
                     SetFlipdownPosition(FlipdownPosition.DOWN);
                     RunIntake(IntakeDirection.Intaking);
                     robot.delaySystem.createConditionalDelay(
-                            () -> this.hasSample() || extenderPosition >= ExtenderPosition.OUT - 10,
+                            () -> hasSample || extenderPosition >= ExtenderPosition.OUT - 10 || !isInState(State.RunningMacro),
                         () -> {
-                            if (this.hasSample()) {
+                            if (!isInState(State.RunningMacro)) return;
+
+                            if (hasSample) {
                                 stopIntake();
                                 robot.intake.setExtenderVelocity(1000);
                                 callback.run();
@@ -99,10 +111,16 @@ public class Intake {
                                 robot.intake.setExtenderVelocity(1000);
                                 failedCallback.run();
                             }
+
+                            state = State.DriverControlled;
                         }
                     );
                 }
         );
+    }
+
+    public void runMarchingIntake() {
+        runMarchingIntake(extenderPosition, () -> {}, () -> {});
     }
 
     public void SetFlipdownPosition(double position) {
@@ -110,17 +128,13 @@ public class Intake {
     }
 
     public void RunIntake(IntakeDirection direction) {
-        if (direction == IntakeDirection.Intaking && intakeLimiter.isPressed()) return;
+        if (direction == IntakeDirection.Intaking && sampleSensor.isPressed()) return;
 
         intake.setPower(direction == IntakeDirection.Intaking ? 1 : -1);
     }
 
     public boolean isExtenderIn() {
         return extenderPosition <= ExtenderPosition.IN + 20;
-    }
-
-    public boolean hasSample() {
-        return intakeLimiter.isPressed();
     }
 
     public void stopIntake() {
@@ -135,59 +149,44 @@ public class Intake {
     public void setExtenderVelocity(int velocity) {
         extender.setVelocity(velocity);
     }
-
-    float clamp(float num, float min, float max) {
-        return Math.max(min, Math.min(num, max));
+    
+    int clampExtender(int target) {
+        return Math.max(ExtenderPosition.IN, Math.min(target, ExtenderPosition.OUT));
     }
 
     public void update() {
         switch (state) {
             case DriverControlled:
-                if (driverController.right_trigger > .05) {
-                    int target = extenderPosition + (int)Math.round(driverController.right_trigger * 500);
-                    extendTo(((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT)));
-
-                }
-                else if (driverController.left_trigger > .05) {
-                    int target = extenderPosition + (int)Math.round(-driverController.left_trigger * 500);
-                    extendTo((int)clamp(target, ExtenderPosition.IN, ExtenderPosition.OUT));
-
-                }
+                float input = driverController.right_trigger - driverController.left_trigger;
+                int target = extenderPosition + Math.round(input * 500);
+                double flipdownPosition = flipdown.getPosition();
+                extendTo(clampExtender(target));
+                SetFlipdownPosition(flipdownPosition);
                 intake.setPower(0);
-                break;
-            case Transferring:
-                flipdown.setPosition(FlipdownPosition.UP);
-                extendTo(ExtenderPosition.IN);
-                if (extenderPosition > ExtenderPosition.IN + 30 && !didStateAction) {
-                    didStateAction = true;
-                    robot.delaySystem.createDelay(2000, () -> {
-                        didStateAction = false;
-                        state = State.DriverControlled;
-                    });
-                }
+            break;
+            case RunningMacro:
+                robot.opMode.telemetry.addLine("[️️⚠️][ INTAKE AUTOMATED ][⚠️]");
+            break;
         }
 
         if (driverController.left_bumper) {
             RunIntake(IntakeDirection.Rejecting);
         }
-        else if (driverController.right_bumper && !intakeLimiter.isPressed()) {
+        else if (driverController.right_bumper && !sampleSensor.isPressed()) {
             RunIntake(IntakeDirection.Intaking);
         }
         else if (intake.getPower() != 0) {
             stopIntake();
         }
 
-        robot.opMode.telemetry.addData("Intake State", state);
-        robot.opMode.telemetry.addData("Intake Power", intake.getPower());
-        robot.opMode.telemetry.addData("Extender Voltage (MILLIAMPS)", extender.getCurrent(CurrentUnit.MILLIAMPS));
-        robot.opMode.telemetry.addData("Extender Velocity", extender.getVelocity());
-        robot.opMode.telemetry.addData("Extender Position", extenderPosition);
-        robot.opMode.telemetry.addData("Extender Target Position", extenderTarget);
-        robot.opMode.telemetry.addData("Extender Power", extender.getPower());
+        if (hasSample) {
+            robot.opMode.telemetry.addLine("[✅][ SAMPLE CAPTURED ][✅]");
+        }
     }
 
     public void internalUpdate() {
         extenderPosition = extender.getCurrentPosition();
         extenderTarget = extender.getTargetPosition();
+        hasSample = sampleSensor.isPressed();
     }
 }

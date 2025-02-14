@@ -56,7 +56,7 @@ public class Drivetrain {
   }
 
   public void ToggleHalfSpeed() {
-    drive_mult = drive_mult == 1 ? 0.2 : 1;
+    drive_mult = drive_mult == 1.5 ? 0.2 : 1.5;
     rot_mult = rot_mult == 1 ? 0.4 : 1;
   }
 

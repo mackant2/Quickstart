@@ -2,7 +2,6 @@ package opmodes;
 
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -13,8 +12,8 @@ import utils.ParsedHardwareMap;
 import utils.PressEventSystem;
 import utils.Robot;
 
-@TeleOp (name = "[OFFICIAL] TeleOp", group = "official")
-public class ITDTeleOp extends OpMode {
+@com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "[OFFICIAL] TeleOp", group = "official")
+public class TeleOp extends OpMode {
     Gamepad driverController;
     Gamepad assistantController;
     Robot robot;
@@ -45,6 +44,8 @@ public class ITDTeleOp extends OpMode {
         pressEventSystem.addListener(driverController, "a", robot.drivetrain::resetOrientation);
         pressEventSystem.addListener(driverController, "dpad_down", robot.arm::transfer);
         pressEventSystem.addListener(driverController, "dpad_up", robot.drivetrain::ToggleHalfSpeed);
+        pressEventSystem.addListener(driverController, "dpad_right", robot.intake::runMarchingIntake);
+        pressEventSystem.addListener(driverController, "b", robot.intake::cancelMacro);
 
         robot.parsedHardwareMap.flipDown.setPosition(0);
         robot.intake.extendTo(Intake.ExtenderPosition.IN);

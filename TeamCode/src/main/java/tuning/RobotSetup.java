@@ -60,7 +60,7 @@ public class RobotSetup extends OpMode {
 
     @Override
     public void start() {
-        pressEventSystem.addListener(gamepad1, "a", () -> claw.setPosition(claw.getPosition() == Arm.ClawPosition.Open ? Arm.ClawPosition.Closed : Arm.ClawPosition.Open));
+        pressEventSystem.addListener(gamepad1, "a", () -> claw.setPosition(claw.getPosition() == Arm.ClawPosition.OPEN ? Arm.ClawPosition.CLOSED : Arm.ClawPosition.OPEN));
     }
 
     @Override

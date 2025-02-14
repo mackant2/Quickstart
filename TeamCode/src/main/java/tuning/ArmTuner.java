@@ -143,6 +143,8 @@ public class ArmTuner extends OpMode {
                 telemetry.addLine("Resetting encoder...");
                 break;
         }
+
+        robot.update();
     }
 
     @Override

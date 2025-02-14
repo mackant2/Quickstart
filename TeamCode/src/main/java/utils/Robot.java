@@ -22,7 +22,7 @@ public class Robot {
     boolean isTeleop;
 
     void InitializeAll() {
-        //initialize four bar
+        //reset arm
         arm.runPreset(Arm.Presets.RESET);
         //flip intake up and bring in
         intake.reset();
