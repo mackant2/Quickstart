@@ -7,8 +7,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-
 import components.Arm;
 import utils.DelaySystem;
 import utils.ParsedHardwareMap;

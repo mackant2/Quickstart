@@ -1,7 +1,5 @@
 package components;
 
-
-import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -34,9 +32,6 @@ public class Drivetrain {
   double drive_mult = 1;
   double rot_mult = 1;
 
-  SparkFunOTOS myOtos;
-
-
   public void resetOrientation() {
       degree_Zero = angles.firstAngle;
   }
@@ -49,8 +44,6 @@ public class Drivetrain {
     rightFront = robot.parsedHardwareMap.frontRight;
     leftBack = robot.parsedHardwareMap.backLeft;
     leftFront = robot.parsedHardwareMap.frontLeft;
-
-    myOtos = robot.parsedHardwareMap.myOtos;
 
     imu = robot.parsedHardwareMap.imu;
   }
@@ -71,14 +64,6 @@ public class Drivetrain {
       theta += 360;
     }
 
-    SparkFunOTOS.Pose2D pos = myOtos.getPosition();
-
-    robot.opMode.telemetry.addData("X coordinate", pos.x);
-    robot.opMode.telemetry.addData("Y coordinate", pos.y);
-    robot.opMode.telemetry.addData("Heading angle", pos.h);
-
-    robot.opMode.telemetry.addData("angle", theta);
-
     double x1 = driverController.left_stick_x;
     double y1 = driverController.left_stick_y * drive_mult;
     double r = driverController.right_stick_x * rotationFactor * rot_mult;
@@ -95,10 +80,10 @@ public class Drivetrain {
     double fastestMotorSpeed = Math.abs(Collections.max(velocities));
     velocities.clear();
     if (fastestMotorSpeed > SPEED_MULT) {
-      rbVelocity /= fastestMotorSpeed;
-      rfVelocity /= fastestMotorSpeed;
-      lbVelocity /= fastestMotorSpeed;
-      lfVelocity /= fastestMotorSpeed;
+      rbVelocity /= (fastestMotorSpeed/SPEED_MULT);
+      rfVelocity /= (fastestMotorSpeed/SPEED_MULT);
+      lbVelocity /= (fastestMotorSpeed/SPEED_MULT);
+      lfVelocity /= (fastestMotorSpeed/SPEED_MULT);
     }
     rightBack.setPower(rbVelocity);
     rightFront.setPower(rfVelocity);

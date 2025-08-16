@@ -73,7 +73,7 @@ public class Limelight extends LinearOpMode {
 
     private Limelight3A limelight;
 
-    Logger logger = new Logger(telemetry);
+    Logger logger = new Logger(telemetry, "Limelight");
 
     @Override
     public void runOpMode() throws InterruptedException

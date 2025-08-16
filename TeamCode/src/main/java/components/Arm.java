@@ -21,11 +21,12 @@ public class Arm {
         public static final double STRAIGHT_BACK = 0.21;
         public static final double STRAIGHT_UP = 0.50;
         public static final double SAMPLE_DEPOSIT = 0.63;
+        public static final double SPECIMEN_DEPOSIT = 0.53;
     }
     public static class WristPosition {
         public static final double TRANSFER = .86;
         public static final double STRAIGHT = 0.5;
-        public static final double SPECIMEN_DEPOSIT = 0.15;
+        public static final double SPECIMEN_DEPOSIT = 0.31;
         public static final double SAMPLE_DEPOSIT = 0.37;
     }
     public static class Height {
@@ -33,9 +34,9 @@ public class Arm {
         public static final int DOWN = 0;
         public static final int TRANSFER = 50;
         public static final int PRE_TRANSFER = 200;
-        public static int WALL_PICKUP = 157;
-        public static final int PRE_SPECIMEN_DEPOSIT = 920;
-        public static final int SPECIMEN_DEPOSIT = 1600;
+        public static int WALL_PICKUP = 160;
+        public static final int PRE_SPECIMEN_DEPOSIT = 750;
+        public static final int SPECIMEN_DEPOSIT = 1400;
     }
     public static class ClawPosition {
         public static final double OPEN = 0.9;
@@ -69,21 +70,27 @@ public class Arm {
     public void depositSample() {
         rotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
         rotateWrist(WristPosition.SAMPLE_DEPOSIT);
-        delaySystem.createDelay(200, () -> setClawPosition(ClawPosition.OPEN));
+        delaySystem.createDelay(300, this::openClaw);
     }
 
     public void depositSample(Runnable callback) {
         rotateFourBar(FourBarPosition.SAMPLE_DEPOSIT);
         rotateWrist(WristPosition.SAMPLE_DEPOSIT);
-        delaySystem.createDelay(200, () -> {
-            setClawPosition(ClawPosition.OPEN);
-            delaySystem.createDelay(200, callback);
-        });
+        delaySystem.createDelay(300, () -> openClaw(callback));
     }
 
     public void updateWallPickupHeight() {
         Height.WALL_PICKUP = liftHeight;
         robot.logger.log("WALL PICKUP HEIGHT: " + liftTarget);
+    }
+
+    public void openClaw() {
+        setClawPosition(ClawPosition.OPEN);
+    }
+
+    public void openClaw(Runnable callback) {
+        openClaw();
+        delaySystem.createDelay(200, callback);
     }
 
     public Arm(Robot robot) {
@@ -110,11 +117,14 @@ public class Arm {
         pressEventSystem.addListener(assistantController, "right_bumper", this::toggleClaw);
         pressEventSystem.addListener(assistantController, "y", () -> runPreset(Presets.PRE_SAMPLE_DEPOSIT));
         pressEventSystem.addListener(assistantController, "a", () -> runPreset(Presets.SPECIMEN_GRAB));
-        pressEventSystem.addListener(assistantController, "x", () -> runPreset(Presets.PRE_SPECIMEN_DEPOSIT));
+        pressEventSystem.addListener(assistantController, "x", () -> {
+            setClawPosition(ClawPosition.CLOSED);
+            delaySystem.createDelay(200, () -> runPreset(Presets.PRE_SPECIMEN_DEPOSIT));
+        });
+        pressEventSystem.addListener(assistantController, "b", this::primeHang);
         pressEventSystem.addListener(assistantController, "dpad_down", () -> runPreset(Presets.PRE_TRANSFER));
         pressEventSystem.addListener(assistantController, "dpad_left", this::transfer);
         pressEventSystem.addListener(assistantController, "dpad_up", this::depositSample);
-        pressEventSystem.addListener(assistantController, "b", this::primeHang);
         pressEventSystem.addListener(assistantController, "dpad_right", this::hang);
     }
 
@@ -145,7 +155,7 @@ public class Arm {
     public void hang() {
         if (hangPrimed) {
             state = State.Hanging;
-            goToHeight(liftHeight - 1200);
+            goToHeight(liftHeight - 1100);
         }
     }
 
@@ -187,6 +197,8 @@ public class Arm {
         wrist.setPosition(clamp((float)(wristPosition + (assistantController.left_trigger - assistantController.right_trigger) * 0.02), 0, 1));
 
         telemetry.addData("Lift Height", liftHeight);
+        telemetry.addData("Four bar position", fourBarPosition);
+        telemetry.addData("Wrist position", wristPosition);
 
         if (hangPrimed) {
             telemetry.addLine("[⚠️][ HANG PRIMED ][⚠️]");
@@ -213,13 +225,16 @@ public class Arm {
             state = State.Transferring;
             runPreset(Presets.PRE_TRANSFER);
             robot.intake.extendTo(Intake.ExtenderPosition.IN);
+            robot.intake.state = Intake.State.RunningMacro;
             delaySystem.createConditionalDelay(
-                    robot.intake::isExtenderIn,
+                    () -> robot.intake.isExtenderIn() || state != State.Transferring,
                     () -> {
+                        if (state != State.Transferring) return;
+
                         runPreset(Arm.Presets.TRANSFER);
                         delaySystem.createDelay(200, () -> {
                             setClawPosition(ClawPosition.CLOSED);
-                            state = State.DriverControlled;
+                            robot.cancelMacro();
                         });
                     }
             );
@@ -248,18 +263,9 @@ public class Arm {
     }
 
     public void dropSample(Runnable callback) {
-        goToHeight(Height.PRE_TRANSFER);
-        delaySystem.createConditionalDelay(
-                () -> liftHeight >= Height.PRE_TRANSFER - 10,
-                () -> {
-                    rotateFourBar(FourBarPosition.STRAIGHT_FORWARD);
-                    rotateWrist(WristPosition.STRAIGHT);
-                    delaySystem.createDelay(750, () -> {
-                        setClawPosition(ClawPosition.OPEN);
-                        delaySystem.createDelay(200, callback);
-                    });
-                }
-        );
+        rotateFourBar(FourBarPosition.STRAIGHT_FORWARD);
+        rotateWrist(WristPosition.STRAIGHT);
+        delaySystem.createDelay(500, () -> openClaw(callback));
     }
 
     public void runPreset(Preset preset) {
@@ -275,8 +281,8 @@ public class Arm {
         public static final Preset TRANSFER = new Preset(Height.TRANSFER, FourBarPosition.STRAIGHT_BACK, WristPosition.TRANSFER, ClawPosition.OPEN);
         public static final Preset PRE_SAMPLE_DEPOSIT = new Preset(Height.UPPER_BUCKET, FourBarPosition.STRAIGHT_UP, WristPosition.STRAIGHT, ClawPosition.CLOSED);
         public static final Preset SPECIMEN_GRAB = new Preset(Height.WALL_PICKUP, FourBarPosition.STRAIGHT_BACK, WristPosition.STRAIGHT, ClawPosition.OPEN);
-        public static final Preset PRE_SPECIMEN_DEPOSIT = new Preset(Height.PRE_SPECIMEN_DEPOSIT, FourBarPosition.STRAIGHT_UP, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.CLOSED);
-        public static final Preset SPECIMEN_DEPOSIT = new Preset(Height.SPECIMEN_DEPOSIT, FourBarPosition.STRAIGHT_UP, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.CLOSED);
+        public static final Preset PRE_SPECIMEN_DEPOSIT = new Preset(Height.PRE_SPECIMEN_DEPOSIT, FourBarPosition.SPECIMEN_DEPOSIT, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.CLOSED);
+        public static final Preset SPECIMEN_DEPOSIT = new Preset(Height.SPECIMEN_DEPOSIT, FourBarPosition.SPECIMEN_DEPOSIT, WristPosition.SPECIMEN_DEPOSIT, ClawPosition.CLOSED);
     }
 
     public static class Preset {

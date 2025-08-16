@@ -7,15 +7,12 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-
 import java.util.Arrays;
 import java.util.List;
 
 import components.Arm;
 import utils.DelaySystem;
 import utils.ParsedHardwareMap;
-import utils.PressEventSystem;
 import utils.Robot;
 
 
@@ -31,8 +28,7 @@ public class ArmTuner extends OpMode {
 
     State state = State.Tuner;
 
-    PressEventSystem pressEventSystem = new PressEventSystem(telemetry);
-    DelaySystem delaySystem = new DelaySystem();
+    DelaySystem delaySystem;
 
     Robot robot;
 
@@ -56,6 +52,8 @@ public class ArmTuner extends OpMode {
     public void init() {
         robot = new Robot(this, hardwareMap, false);
 
+        delaySystem = robot.delaySystem;
+
         ParsedHardwareMap parsedHardwareMap = robot.parsedHardwareMap;
         liftLeft = parsedHardwareMap.liftLeft;
         liftRight = parsedHardwareMap.liftRight;
@@ -64,8 +62,6 @@ public class ArmTuner extends OpMode {
         rightFourBar = parsedHardwareMap.rightFourBar;
         wrist = parsedHardwareMap.wrist;
         claw = parsedHardwareMap.claw;
-
-        robot.arm.runPreset(Arm.Presets.RESET);
     }
 
     @Override
@@ -95,9 +91,6 @@ public class ArmTuner extends OpMode {
 
     @Override
     public void loop() {
-        pressEventSystem.update();
-        delaySystem.update();
-
         switch (state) {
             case RunPresets:
                     if (!scheduledNextPreset) {

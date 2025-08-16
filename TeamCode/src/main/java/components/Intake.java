@@ -1,14 +1,10 @@
 package components;
 
-import android.sax.StartElementListener;
-
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
-import com.sfdev.assembly.state.StateMachine;
-import com.sfdev.assembly.state.StateMachineBuilder;
 
 import utils.ParsedHardwareMap;
 import utils.Robot;
@@ -23,7 +19,7 @@ public class Intake {
         Rejecting
     }
     public static class ExtenderPosition {
-        public static final int IN = 0;
+        public static final int IN = -10;
         public static final int OUT = 2000;
     }
     public static class FlipdownPosition {
@@ -36,9 +32,7 @@ public class Intake {
     RevBlinkinLedDriver display;
     Robot robot;
     Gamepad driverController;
-    StateMachine stateMachine;
     TouchSensor sampleSensor, extenderLimiter;
-    boolean didStateAction = false;
     public int extenderPosition;
     public boolean hasSample = false;
     int extenderTarget;
@@ -54,15 +48,12 @@ public class Intake {
         driverController = robot.opMode.gamepad1;
         extenderLimiter = parsedHardwareMap.extenderLimiter;
         sampleSensor = parsedHardwareMap.intakeLimiter;
-
-        stateMachine = new StateMachineBuilder()
-            .state(State.DriverControlled)
-            .transition(() -> driverController.right_bumper)
-            .build();
     }
 
     public void toggleFlipdown() {
-        flipdown.setPosition(flipdown.getPosition() == FlipdownPosition.UP ? FlipdownPosition.DOWN : FlipdownPosition.UP);
+        if (!isInState(State.DriverControlled)) return;
+
+        SetFlipdownPosition(flipdown.getPosition() == FlipdownPosition.UP ? FlipdownPosition.DOWN : FlipdownPosition.UP);
     }
 
     public void adjustExtenderPosition(int change) {
@@ -74,10 +65,6 @@ public class Intake {
         extenderPosition = position;
         SetFlipdownPosition(FlipdownPosition.UP);
         extender.setTargetPosition(extenderPosition);
-    }
-
-    public void cancelMacro() {
-        state = State.DriverControlled;
     }
 
     boolean isInState(State checkState) {
@@ -92,23 +79,23 @@ public class Intake {
                 () -> {
                     if (!isInState(State.RunningMacro)) return;
 
-                    robot.intake.setExtenderVelocity(400);
-                    robot.intake.extendTo(ExtenderPosition.OUT);
+                    setExtenderVelocity(400);
+                    extendTo(ExtenderPosition.OUT);
                     SetFlipdownPosition(FlipdownPosition.DOWN);
                     RunIntake(IntakeDirection.Intaking);
                     robot.delaySystem.createConditionalDelay(
-                            () -> hasSample || extenderPosition >= ExtenderPosition.OUT - 10 || !isInState(State.RunningMacro),
+                        () -> hasSample || extenderPosition >= ExtenderPosition.OUT - 10 || !isInState(State.RunningMacro),
                         () -> {
+                            extendTo(extenderPosition);
+                            stopIntake();
+                            setExtenderVelocity(1000);
+
                             if (!isInState(State.RunningMacro)) return;
 
                             if (hasSample) {
-                                stopIntake();
-                                robot.intake.setExtenderVelocity(1000);
                                 callback.run();
                             }
                             else {
-                                stopIntake();
-                                robot.intake.setExtenderVelocity(1000);
                                 failedCallback.run();
                             }
 
@@ -120,7 +107,17 @@ public class Intake {
     }
 
     public void runMarchingIntake() {
-        runMarchingIntake(extenderPosition, () -> {}, () -> {});
+        runMarchingIntake(extenderPosition, () -> {
+            state = State.RunningMacro;
+            robot.delaySystem.createConditionalDelay(
+                    () -> driverController.a || !isInState(State.RunningMacro),
+                    () -> {
+                        if (!isInState(State.RunningMacro)) return;
+
+                        robot.arm.transfer();
+                    }
+            );
+        }, () -> {});
     }
 
     public void SetFlipdownPosition(double position) {
@@ -142,7 +139,7 @@ public class Intake {
     }
 
     public void reset() {
-        flipdown.setPosition(FlipdownPosition.UP);
+        SetFlipdownPosition(FlipdownPosition.UP);
         extendTo(ExtenderPosition.IN);
     }
 
@@ -159,24 +156,21 @@ public class Intake {
             case DriverControlled:
                 float input = driverController.right_trigger - driverController.left_trigger;
                 int target = extenderPosition + Math.round(input * 500);
-                double flipdownPosition = flipdown.getPosition();
-                extendTo(clampExtender(target));
-                SetFlipdownPosition(flipdownPosition);
-                intake.setPower(0);
+                extender.setTargetPosition(clampExtender(target));
+
+                if (driverController.left_bumper) {
+                    RunIntake(IntakeDirection.Rejecting);
+                }
+                else if (driverController.right_bumper && !sampleSensor.isPressed()) {
+                    RunIntake(IntakeDirection.Intaking);
+                }
+                else if (intake.getPower() != 0) {
+                    stopIntake();
+                }
             break;
             case RunningMacro:
                 robot.opMode.telemetry.addLine("[️️⚠️][ INTAKE AUTOMATED ][⚠️]");
             break;
-        }
-
-        if (driverController.left_bumper) {
-            RunIntake(IntakeDirection.Rejecting);
-        }
-        else if (driverController.right_bumper && !sampleSensor.isPressed()) {
-            RunIntake(IntakeDirection.Intaking);
-        }
-        else if (intake.getPower() != 0) {
-            stopIntake();
         }
 
         if (hasSample) {

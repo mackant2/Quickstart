@@ -40,12 +40,12 @@ public class TeleOp extends OpMode {
     public void start() {
         robot.arm.registerControls();
         //drivetrain & intake - gamepad1
-        pressEventSystem.addListener(driverController, "y", robot.intake::toggleFlipdown);
-        pressEventSystem.addListener(driverController, "a", robot.drivetrain::resetOrientation);
+        pressEventSystem.addListener(driverController, "a", robot.intake::toggleFlipdown);
+        pressEventSystem.addListener(driverController, "dpad_left", robot.drivetrain::resetOrientation);
         pressEventSystem.addListener(driverController, "dpad_down", robot.arm::transfer);
         pressEventSystem.addListener(driverController, "dpad_up", robot.drivetrain::ToggleHalfSpeed);
-        pressEventSystem.addListener(driverController, "dpad_right", robot.intake::runMarchingIntake);
-        pressEventSystem.addListener(driverController, "b", robot.intake::cancelMacro);
+        //pressEventSystem.addListener(driverController, "dpad_right", robot.intake::runMarchingIntake);
+        pressEventSystem.addListener(driverController, "b", robot::cancelMacro);
 
         robot.parsedHardwareMap.flipDown.setPosition(0);
         robot.intake.extendTo(Intake.ExtenderPosition.IN);

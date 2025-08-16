@@ -39,10 +39,8 @@ public class SpecimenAuto extends OpMode {
     private AutoState state = AutoState.Idle;
 
     Robot robot;
+    Arm arm;
     Intake intake;
-
-    private final double robotWidth = 12.375;
-    private final double robotLength = 16.125;
 
     private Follower follower;
 
@@ -56,17 +54,19 @@ public class SpecimenAuto extends OpMode {
 
     int goalSpecimens = 3;
     int specimensScored = 0;
-    double sampleIntakeX = 23;
+    double sampleIntakeX = 29;
     int samplesDeposited = 0;
     double specimenHangX = 42;
-    double specimenHangGap = 5;
+    double specimenHangGap = 0.1;
     double startY = 72;
     double firstSampleY = 23;
     double sampleGap = 10;
+    Pose startPose = new Pose(8.0625, startY);
 
     PathChain initScorePath;
     List<List<PathChain>> cyclePaths = new ArrayList<>();
     List<PathChain> intakePaths = new ArrayList<>();
+    List<PathChain> sampleDepositPaths = new ArrayList<>();
 
     double wallX = 10.5;
 
@@ -74,20 +74,18 @@ public class SpecimenAuto extends OpMode {
     public void init() {
         robot = new Robot(this, hardwareMap, false);
 
+        arm = robot.arm;
         intake = robot.intake;
         delaySystem = robot.delaySystem;
 
         Constants.setConstants(FConstants.class, LConstants.class);
         follower = new Follower(hardwareMap);
+        follower.setStartingPose(startPose);
 
         double grabY = 35;
 
-        Pose startPose = new Pose(8.0625, startY);
         Pose grabPose = new Pose(wallX + 2, grabY);
         Pose grabConfirmPose = new Pose(wallX - 10, grabY);
-
-        follower.setStartingPose(startPose);
-        follower.holdPoint(startPose);
 
         grabConfirmPath = follower.pathBuilder()
             .addPath(
@@ -100,7 +98,7 @@ public class SpecimenAuto extends OpMode {
             .build();
 
         for (int i = 0; i < goalSpecimens; i++) {
-            specimenPoses.add(new Pose(specimenHangX + 3 * i, startY + specimenHangGap * i));
+            specimenPoses.add(new Pose(specimenHangX, startY - specimenHangGap * i));
         }
 
         initScorePath = follower.pathBuilder()
@@ -136,6 +134,17 @@ public class SpecimenAuto extends OpMode {
                     .setLinearHeadingInterpolation(pathStart.getHeading(), pathEnd.getHeading(), 0.95)
                     .build()
             );
+
+            Pose depositPose = new Pose(sampleIntakeX - 10, startY - 9, Math.toRadians(180));
+
+            sampleDepositPaths.add(
+                follower.pathBuilder()
+                    .addPath(
+                        new BezierLine(pathEnd, depositPose)
+                    )
+                    .setLinearHeadingInterpolation(pathEnd.getHeading(), depositPose.getHeading(), 0.95)
+                    .build()
+            );
         }
 
         for (int i = 1; i < goalSpecimens; i++) {
@@ -144,42 +153,53 @@ public class SpecimenAuto extends OpMode {
             if (goalSpecimens > 2) {
                 Pose pathStart;
                 if (i == 1) {
-                    Point startPoint = intakePaths.get(intakePaths.size() - 1).getPath(0).getPoint(0);
+                    Point startPoint = sampleDepositPaths.get(intakePaths.size() - 1).getPath(0).getPoint(1);
                     pathStart = new Pose(startPoint.getX(), startPoint.getY());
-                }
-                else {
-                    pathStart = specimenPoses.get(i - 1);
-                }
-                
-                grabPath = follower.pathBuilder()
+
+                    grabPath = follower.pathBuilder()
                         .addPath(
-                                new BezierLine(
-                                        pathStart,
-                                        grabPose
-                                )
+                            new BezierLine(
+                                pathStart,
+                                grabPose
+                            )
                         )
                         .setConstantHeadingInterpolation(0)
                         .build();
-            }
-            else {
-                grabPath = follower.pathBuilder()
+                }
+                else {
+                    pathStart = specimenPoses.get(i - 1);
+
+                    grabPath = follower.pathBuilder()
                         .addPath(
                                 new BezierCurve(
-                                        specimenPoses.get(0),
-                                        //Control point that bends path to avoid getting stuck on corner of sub
+                                        pathStart,
                                         new Pose(10, 62),
                                         grabPose
                                 )
                         )
                         .setConstantHeadingInterpolation(0)
                         .build();
+                }
+            }
+            else {
+                grabPath = follower.pathBuilder()
+                    .addPath(
+                        new BezierCurve(
+                            specimenPoses.get(0),
+                            //Control point that bends path to avoid getting stuck on corner of sub
+                            new Pose(10, 62),
+                            grabPose
+                        )
+                    )
+                    .setConstantHeadingInterpolation(0)
+                    .build();
             }
 
             PathChain scorePath = follower.pathBuilder()
                 .addPath(
-                        new BezierCurve(
+                        new BezierLine(
                                 grabConfirmPose,
-                                specimenPoses.get(i)
+                                new Pose(specimenHangX + 2 * (i - 1), startY - specimenHangGap * (i - 1))
                         )
                 )
                 .setConstantHeadingInterpolation(0)
@@ -213,13 +233,14 @@ public class SpecimenAuto extends OpMode {
 
     @Override
     public void start() {
-        robot.arm.runPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
+        follower.setPose(startPose);
         TransferToState(AutoState.MovingToSub);
     }
 
     void TransferToState(AutoState newState) {
         didStateAction = false;
         state = newState;
+        robot.logger.log("Transferred to state " + newState);
     }
 
     @Override public void loop() {
@@ -227,14 +248,14 @@ public class SpecimenAuto extends OpMode {
             case ScoringSpecimen:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.runPreset(Arm.Presets.SPECIMEN_DEPOSIT);
-                    delaySystem.createDelay(1250, () -> {
-                        robot.arm.setClawPosition(Arm.ClawPosition.OPEN);
-                        specimensScored++;
-                        delaySystem.createDelay(200, () -> {
-                            robot.arm.runPreset(Arm.Presets.RESET);
+                    arm.runPreset(Arm.Presets.SPECIMEN_DEPOSIT);
+                    delaySystem.createConditionalDelay(
+                        () -> arm.liftHeight >= Arm.Height.SPECIMEN_DEPOSIT - 100,
+                        () -> arm.openClaw(() -> {
+                            specimensScored++;
+                            arm.runPreset(Arm.Presets.RESET);
                             if (specimensScored < goalSpecimens) {
-                                if (specimensScored == 1 && goalSpecimens > 2) {
+                                 if (specimensScored == 1 && goalSpecimens > 2) {
                                     TransferToState(AutoState.MovingToIntake);
                                 }
                                 else {
@@ -245,8 +266,8 @@ public class SpecimenAuto extends OpMode {
                             else {
                                 TransferToState(AutoState.Parking);
                             }
-                        });
-                    });
+                        })
+                    );
                 }
                 break;
             case MovingToIntake:
@@ -254,7 +275,7 @@ public class SpecimenAuto extends OpMode {
                     didStateAction = true;
                     follower.followPath(intakePaths.get(samplesDeposited));
                     delaySystem.createConditionalDelay(
-                            () -> !follower.isBusy(),
+                            () -> follower.getPose().getY() <= firstSampleY + 2,
                             () -> TransferToState(AutoState.IntakingSample)
                     );
                 }
@@ -263,15 +284,15 @@ public class SpecimenAuto extends OpMode {
                 if (!didStateAction) {
                     didStateAction = true;
                     intake.runMarchingIntake(
-                            Intake.ExtenderPosition.OUT / 2 - 150,
-                            () -> robot.arm.transfer(() -> TransferToState(AutoState.DepositingSample)),
+                            100,
+                            () -> arm.transfer(() -> TransferToState(AutoState.DepositingSample)),
                             () -> {
                                 intake.extendTo(Intake.ExtenderPosition.IN);
                                 delaySystem.createConditionalDelay(
                                         intake::isExtenderIn,
                                         () -> {
                                             samplesDeposited++;
-                                            if (samplesDeposited < goalSpecimens - 1) {
+                                            if (samplesDeposited < goalSpecimens - 2) {
                                                 TransferToState(AutoState.MovingToIntake);
                                             }
                                             else {
@@ -286,27 +307,33 @@ public class SpecimenAuto extends OpMode {
             case DepositingSample:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.dropSample(() -> {
-                        samplesDeposited++;
-                        robot.arm.runPreset(Arm.Presets.RESET);
-                        if (samplesDeposited < goalSpecimens - 2) {
-                            TransferToState(AutoState.MovingToIntake);
-                        }
-                        else {
-                            TransferToState(AutoState.MovingToWall);
-                        }
-                    });
+                    arm.goToHeight(Arm.Height.TRANSFER + 100);
+                    follower.followPath(sampleDepositPaths.get(samplesDeposited));
+                    delaySystem.createConditionalDelay(
+                        () -> follower.getPose().getX() < sampleIntakeX - 9
+                            ,
+                        () -> arm.dropSample(() -> {
+                            samplesDeposited++;
+                            arm.runPreset(Arm.Presets.RESET);
+                            if (samplesDeposited < goalSpecimens - 2) {
+                                TransferToState(AutoState.MovingToIntake);
+                            }
+                            else {
+                                TransferToState(AutoState.MovingToWall);
+                            }
+                        })
+                    );
                 }
                 break;
             case MovingToWall:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.runPreset(Arm.Presets.SPECIMEN_GRAB);
+                    arm.runPreset(Arm.Presets.SPECIMEN_GRAB);
                     PathChain grabPath = cyclePaths.get(specimensScored - 1).get(0);
                     follower.followPath(grabPath);
                     delaySystem.createConditionalDelay(
                             () -> follower.getPose().getX() < wallX + 2.5,
-                            () -> delaySystem.createDelay(1000, () -> TransferToState(AutoState.GoingForGrab))
+                            () -> delaySystem.createDelay(1500, () -> TransferToState(AutoState.GoingForGrab))
                     );
                 }
                 break;
@@ -322,18 +349,18 @@ public class SpecimenAuto extends OpMode {
             case GrabbingSpecimen:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.setClawPosition(Arm.ClawPosition.CLOSED);
+                    arm.setClawPosition(Arm.ClawPosition.CLOSED);
                     delaySystem.createDelay(200, () -> TransferToState(AutoState.MovingToSub));
                 }
                 break;
             case MovingToSub:
                 if (!didStateAction) {
                     didStateAction = true;
-                    robot.arm.runPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
+                    arm.runPreset(Arm.Presets.PRE_SPECIMEN_DEPOSIT);
                     PathChain scorePath = specimensScored == 0 ? initScorePath : cyclePaths.get(specimensScored - 1).get(1);
                     follower.followPath(scorePath, false);
                     delaySystem.createConditionalDelay(
-                            () -> follower.getPose().getX() > specimenHangX - 5.5,
+                            () -> follower.getPose().getX() > (specimenHangX - 5) + (2 * specimensScored),
                             () -> TransferToState(AutoState.ScoringSpecimen)
                     );
                 }
@@ -353,7 +380,7 @@ public class SpecimenAuto extends OpMode {
         telemetry.addData("Specimens Scored", specimensScored);
         telemetry.addData("State", state);
         telemetry.addData("X", follower.getPose().getX());
-        telemetry.addData("Y", follower.getPose().getY());
+        telemetry.addData("Y", follower.getPose().getX());
 
         robot.logger.log("X: " + follower.getPose().getX() + ", Y: " + follower.getPose().getY() + ", Heading: " + follower.getPose().getHeading());
 

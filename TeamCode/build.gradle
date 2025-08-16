@@ -39,7 +39,6 @@ android {
 }
 
 repositories {
-    maven {url = 'https://jitpack.io' } //needed for State Factory
     maven {url = 'https://www.matthewo.tech/maven/'} //needed for Fast Load
 }
 
@@ -49,6 +48,5 @@ dependencies {
 
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.7'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.4.21'
-    implementation 'com.github.StateFactory-Dev:StateFactory:0.3.6'
     implementation 'org.team11260:fast-load:0.1.2'
 }

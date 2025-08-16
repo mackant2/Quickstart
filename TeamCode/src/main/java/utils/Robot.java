@@ -36,12 +36,17 @@ public class Robot {
         this.pressEventSystem = new PressEventSystem(telemetry);
         arm = new Arm(this);
         drivetrain = new Drivetrain(this);
-        logger = new Logger(opMode.telemetry);
+        logger = new Logger(opMode.telemetry, isTeleop ? "TeleOp" : "Auto");
         intake = new Intake(this);
 
         if (!isTeleop) {
             InitializeAll();
         }
+    }
+
+    public void cancelMacro() {
+        intake.state = Intake.State.DriverControlled;
+        arm.state = Arm.State.DriverControlled;
     }
 
     public void update() {

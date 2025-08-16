@@ -40,13 +40,10 @@ public class SampleAuto extends OpMode {
     Logger logger;
     Telemetry telemetry;
 
-    private final double robotWidth = 12.3;
-    private final double robotLength = 15.75;
+    final Pose startPose = new Pose(7.875, 113.85, Math.toRadians(90));
+    final Pose scorePose = new Pose(15,131, Math.toRadians(135));
 
-    private final Pose startPose = new Pose(7.875, 113.85, Math.toRadians(90));
-    final Pose scorePose = new Pose(14,130, Math.toRadians(135));
-
-    private Follower follower;
+    Follower follower;
 
     DelaySystem delaySystem;
 
@@ -56,12 +53,12 @@ public class SampleAuto extends OpMode {
     int samplesScored = 0;
     int rawStateIndex = 0;
 
-    double intakeX = 33;
+    double intakeX = 32;
 
     List<Pose> samplePoses = Arrays.asList(
-            new Pose(intakeX, 122.5, Math.toRadians(180)),
-            new Pose(intakeX, 131.5, Math.toRadians(180)),
-            new Pose(intakeX + 1, 130, Math.toRadians(220))
+        new Pose(intakeX, 122.5, Math.toRadians(180)),
+        new Pose(intakeX, 131.5, Math.toRadians(180)),
+        new Pose(intakeX, 130, Math.toRadians(220))
     );
 
     List<PathChain> samplePaths = new ArrayList<>();
@@ -129,6 +126,7 @@ public class SampleAuto extends OpMode {
 
     @Override
     public void start() {
+        follower.setPose(startPose);
         state = SampleAutoState.MovingToBucket;
     }
 
@@ -154,7 +152,7 @@ public class SampleAuto extends OpMode {
                 if (!didStateAction) {
                     didStateAction = true;
                     delaySystem.createConditionalDelay(
-                        () -> arm.liftHeight >= Arm.Height.UPPER_BUCKET - 50,
+                        () -> arm.liftHeight >= Arm.Height.UPPER_BUCKET - 10,
                         () -> arm.depositSample(() -> {
                                 samplesScored++;
                                 if (samplesScored < goalSamples) {

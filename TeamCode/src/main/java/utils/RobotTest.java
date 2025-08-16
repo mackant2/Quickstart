@@ -1,11 +1,8 @@
 package utils;
 
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import components.IntakeTest;
-//import org.firstinspires.ftc.teamcode.main.components.IntakeTest;
-//import org.firstinspires.ftc.teamcode.components.util.Logger;
 
 public class RobotTest {
 

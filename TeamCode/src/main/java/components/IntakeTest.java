@@ -3,8 +3,6 @@ package components;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.sfdev.assembly.state.StateMachine;
-import com.sfdev.assembly.state.StateMachineBuilder;
 
 import utils.DelaySystem;
 import utils.RobotTest;
@@ -14,10 +12,7 @@ public class IntakeTest {
     public enum IntakeTestState {
         DriverControlled,
         Intaking,
-        Transferring,
         Rejecting,
-        ResetTransfer
-
     }
     public IntakeTestState teststate = IntakeTestState.DriverControlled;
 
@@ -26,10 +21,6 @@ public class IntakeTest {
     ColorSensor intakeColorSensor;
     RobotTest robotTest;
     Gamepad driverController;
-    StateMachine stateMachine1;
-    float transferStartTime;
-    boolean transferStarted = false;
-    boolean transferResetStarted = false;
     public void Initialize() {
     }
     public IntakeTest(TestHardwareMap drive, RobotTest robot) {
@@ -38,11 +29,6 @@ public class IntakeTest {
         driverController = robot.opMode.gamepad1;
 
         intaketest = drive.intaketest;
-
-       stateMachine1 = new StateMachineBuilder()
-                .state(IntakeTestState.DriverControlled)
-                .transition(() -> driverController.right_bumper)
-                .build();
     }
 
 

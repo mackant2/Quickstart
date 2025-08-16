@@ -78,7 +78,7 @@ public class Limelight extends LinearOpMode {
     {
         Limelight3A limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
-        Logger logger = new Logger(telemetry);
+        Logger logger = new Logger(telemetry, "Limelight");
         DecimalFormat positiveFormat = new DecimalFormat("#000.0000");
         DecimalFormat negativeFormat = new DecimalFormat("#00.0000");
 

@@ -15,13 +15,13 @@ public class Logger {
     private Telemetry.Item recentLogItem;
     long startTime;
 
-    public Logger(Telemetry _telemetry) {
+    public Logger(Telemetry _telemetry, String opModeName) {
         startTime = System.currentTimeMillis();
         telemetry = _telemetry;
         recentLogItem = telemetry.addData("Recent Log", "");
 
         try {
-            File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/runtime_log.txt");
+            File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/runtime_log_" + opModeName + ".txt");
             writer = new FileWriter(file,false);
         }
         catch (IOException e) {
